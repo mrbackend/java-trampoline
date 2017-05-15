@@ -1,5 +1,5 @@
 /**
- * Stack safe evaluation of recursive programs
+ * Stack safe evaluation of recursive programs.
  */
 package org.jstuff.trampoline;
 
