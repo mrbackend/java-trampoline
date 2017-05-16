@@ -1,12 +1,9 @@
-# java-trampoline
+package org.jstuff.trampoline;
 
-![Build Status](https://travis-ci.com/mrbackend/java-trampoline.svg?token=ZXZHjq4KzqdbQ2QPWysp&branch=master)
-
-## The problem with recursion
-
-Consider the following recursive `List` type:
-```java
 public abstract class List<A> {
+
+    private List() {
+    }
 
     public abstract int size();
 
@@ -33,12 +30,3 @@ public abstract class List<A> {
     }
 
 }
-```
-
-`int size()` is implemented using recursion. However, for large `List`s, running `size()` will overflow the stack.
-
-## How it works
-
-<svg width="100" height="100">
-    <circle cx="50" cy="50" r="40" stroke="green" stroke-width="4" fill="yellow">
-</svg>
