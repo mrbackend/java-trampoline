@@ -39,4 +39,4 @@ public abstract class List<A> {
 
 ## How it works
 
-![Resume FlatMap(FlatMap(...,...),...)](https://github.com/mrbackend/java-trampoline/blob/master/svg/resume-flatmap-flatmap.svg)
+![Resume FlatMap(FlatMap(...,...),...)](https://rawgit.com/mrbackend/java-trampoline/master/svg/resume-flatmap-flatmap.svg)
