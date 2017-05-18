@@ -1,6 +1,6 @@
 # java-trampoline
 
-![Build Status](https://travis-ci.org/mrbackend/java-trampoline.svg?branch=master)
+[![Build Status](https://travis-ci.org/mrbackend/java-trampoline.svg?branch=master)](https://travis-ci.org/mrbackend/java-trampoline)
 
 ## The problem with recursion
 
