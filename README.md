@@ -1,6 +1,6 @@
 # java-trampoline
 
-![Build Status](https://travis-ci.org/mrbackend/java-trampoline.svg?branch=master)
+[![Build Status](https://travis-ci.org/mrbackend/java-trampoline.svg?branch=master)](https://travis-ci.org/mrbackend/java-trampoline)
 
 ## The problem with recursion
 
@@ -48,7 +48,7 @@ pellentesque, volutpat consectetur odio. Aliquam id purus efficitur, semper metu
 sodales nibh. Aenean sed pellentesque lectus. Pellentesque ullamcorper eu sapien sit amet lobortis. Curabitur dolor
 tellus, porta ac enim quis, tempus vestibulum ante.
 
-![resume(FlatMap(FlatMap))](https://rawgit.com/mrbackend/java-trampoline/master/svg/resume-flatmap-flatmap.svg)
+<img width="841px" height="211px" src="https://rawgit.com/mrbackend/java-trampoline/master/svg/resume-flatmap-flatmap.svg">
 
 Cras sollicitudin porta justo, in ultricies ligula tempor ac. Vestibulum suscipit tincidunt auctor. Cras vitae mattis
 dolor. Aenean nec nulla vel felis scelerisque eleifend sed vitae augue. In tempus, tellus id eleifend tincidunt, libero
