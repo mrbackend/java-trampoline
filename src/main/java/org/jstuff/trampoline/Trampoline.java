@@ -77,10 +77,10 @@ public abstract class Trampoline<A> {
 
     /*
      * resume(Return(x)) = Return(x)
-     * resume(Suspend(() -> a)) = a
+     * resume(Suspend(f)) = f.get()
      * resume(FlatMap(Return(x), f)) = f.apply(x)
-     * resume(FlatMap(Suspend(() -> a), f)) = FlatMap(a, f)
-     * resume(FlatMap(FlatMap(a, x -> b), f)) = FlatMap(a, x -> FlatMap(b, f))
+     * resume(FlatMap(Suspend(f), g)) = FlatMap(f.get(), g)
+     * resume(FlatMap(FlatMap(a, f), g)) = FlatMap(a, x -> FlatMap(f.apply(x), g))
      */
     abstract Trampoline<A> resume();
 

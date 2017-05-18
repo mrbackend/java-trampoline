@@ -39,6 +39,4 @@ public abstract class List<A> {
 
 ## How it works
 
-<svg width="100" height="100">
-    <circle cx="50" cy="50" r="40" stroke="green" stroke-width="4" fill="yellow">
-</svg>
+![Resume FlatMap(FlatMap(...,...),...)](https://github.com/mrbackend/java-trampoline/blob/master/svg/resume-flatmap-flatmap.svg)
