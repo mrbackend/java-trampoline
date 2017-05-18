@@ -84,7 +84,7 @@ public abstract class Trampoline<A> {
      */
     abstract Trampoline<A> resume();
 
-    abstract <B> Trampoline<B> reAssoc(Function<A, Trampoline<B>> f);
+    abstract <B> Trampoline<B> applyFlatMap(Function<A, Trampoline<B>> f);
 
 
     private static final class Return<A> extends Trampoline<A> {
@@ -101,7 +101,7 @@ public abstract class Trampoline<A> {
         }
 
         @Override
-        <B> Trampoline<B> reAssoc(Function<A, Trampoline<B>> f) {
+        <B> Trampoline<B> applyFlatMap(Function<A, Trampoline<B>> f) {
             return f.apply(value);
         }
 
@@ -122,7 +122,7 @@ public abstract class Trampoline<A> {
         }
 
         @Override
-        <B> Trampoline<B> reAssoc(Function<A, Trampoline<B>> f) {
+        <B> Trampoline<B> applyFlatMap(Function<A, Trampoline<B>> f) {
             return thunk.get().flatMap(f);
         }
 
@@ -141,11 +141,11 @@ public abstract class Trampoline<A> {
 
         @Override
         Trampoline<A> resume() {
-            return trampoline.reAssoc(nextTrampolineF);
+            return trampoline.applyFlatMap(nextTrampolineF);
         }
 
         @Override
-        <B> Trampoline<B> reAssoc(Function<A, Trampoline<B>> f) {
+        <B> Trampoline<B> applyFlatMap(Function<A, Trampoline<B>> f) {
             return trampoline.flatMap(x -> nextTrampolineF.apply(x).flatMap(f));
         }
 
