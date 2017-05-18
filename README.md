@@ -39,4 +39,4 @@ public abstract class List<A> {
 
 ## How it works
 
-<img src=https://rawgit.com/mrbackend/java-trampoline/master/svg/resume-flatmap-flatmap.svg>
+<img src="https://rawgit.com/mrbackend/java-trampoline/master/svg/resume-flatmap-flatmap.svg">
