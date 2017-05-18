@@ -48,7 +48,25 @@ pellentesque, volutpat consectetur odio. Aliquam id purus efficitur, semper metu
 sodales nibh. Aenean sed pellentesque lectus. Pellentesque ullamcorper eu sapien sit amet lobortis. Curabitur dolor
 tellus, porta ac enim quis, tempus vestibulum ante.
 
+When a `Trampoline` is evaluated, using `run()`, it is stepwise transformed in a loop. Each step transforms the result closer to a
+`Return(a)`, at which point `a` is returned. The transform performed in each step depends on the structure of the
+current result:
+
+<img width="400px" height="127px" src="https://rawgit.com/mrbackend/java-trampoline/master/svg/resume-suspend.svg">
+
+`resume()` on a `Suspend(f)`
+
+<img width="505px" height="127px" src="https://rawgit.com/mrbackend/java-trampoline/master/svg/resume-flatmap-return.svg">
+
+`resume()` on a `FlatMap(Return(a))`
+
+<img width="673px" height="211px" src="https://rawgit.com/mrbackend/java-trampoline/master/svg/resume-flatmap-suspend.svg">
+
+`resume()` on a `FlatMap(Suspend(f))`
+
 <img width="841px" height="211px" src="https://rawgit.com/mrbackend/java-trampoline/master/svg/resume-flatmap-flatmap.svg">
+
+`resume()` on a `FlatMap(FlatMap(ta,f),g)` 
 
 Cras sollicitudin porta justo, in ultricies ligula tempor ac. Vestibulum suscipit tincidunt auctor. Cras vitae mattis
 dolor. Aenean nec nulla vel felis scelerisque eleifend sed vitae augue. In tempus, tellus id eleifend tincidunt, libero
