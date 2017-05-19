@@ -7,7 +7,9 @@
 Consider the following recursive `List` type:
 ```java
 public abstract class List<A> {
-
+    private List() {
+    }
+    
     public final int size() {
         return foldLeft((accSize, elem) -> accSize + 1, 0);
         // or return foldRight((elem, accSize) -> accSize + 1, 0);
@@ -57,9 +59,12 @@ public abstract class List<A> {
 
 }
 ```
-_Example 1: Basic `List` class_
+_Example 1: Stack-unsafe `List` class_
 
-(Note: `visit` implements a sort of "functional visitor pattern", but without a separate `Visitor` class. For the
+(Note 1: Please disregard that this class offers no means for constructing an `List`. The subject of this text is
+recursion.)
+
+(Note 2: `visit` implements a sort of "functional visitor pattern", but without a separate `Visitor` class. For the
 purpose of presenting our `Trampoline` type, its only role is to help us implement recursion in single methods
 instead of once per subclass, which should make it easier to spot the differences between examples. However, it is a
 useful general purpose pattern to know.) 
@@ -74,9 +79,31 @@ overflow the stack.
 Any tail-recursive algorithm can be rewritten as a loop (See
 [Wikipedia: Tail call](https://en.wikipedia.org/wiki/Tail_call)). That does not apply to all recursive algorithms,
 though. Some data stuctures, such as trees, don't lend themselves well to tail-recursive traversal. Besides, sometimes,
-a loop version of an originally tail-recursive problem may be harder to comprehend than the recursive version.
+a loop version of an originally tail-recursive solution may be harder to comprehend than the recursive version.
 
-One solution is using a trampoline. Compare this to the previous `List` implementation:
+One solution is using a trampoline. Compare these implementations of `foldLeft` and `foldRight`:
+```java
+    //...
+    public final <B> B foldLeft(BiFunction<B, A, B> reduceF, B init) {
+        return visit(
+                () -> init,
+                (head, tail) -> {
+                    B folded = reduceF.apply(init, head);
+                    return tail.foldLeft(reduceF, folded);
+                });
+    }
+
+    public final <B> B foldRight(BiFunction<A, B, B> reduceF, B init) {
+        return visit(
+                () -> init,
+                (head, tail) -> {
+                    B folded = tail.foldRight(reduceF, init);
+                    return reduceF.apply(head, folded);
+                });
+    }
+```
+_Example 1 excerpt: Stack-unsafe folds_
+
 ```java
     //...
     public final <B> B foldLeft(BiFunction<B, A, B> reduceF, B init) {
@@ -100,12 +127,14 @@ One solution is using a trampoline. Compare this to the previous `List` implemen
         return visit(
                 () -> Trampoline.ret(init),
                 (head, tail) -> {
-                    Trampoline<B> foldedAsTrampoline = tail.foldRightAsTrampoline(reduceF, init);
+                    Trampoline<B> foldedAsTrampoline = Trampoline.suspend(() -> tail.foldRightAsTrampoline(reduceF, init));
                     return foldedAsTrampoline.map(folded -> reduceF.apply(head, folded));
                 });
     }
     //...
 ```
+_Example 2: Stack-safe folds_
+
 Instead of returning a value, the recursive methods return a `Trampoline`. A `Trampoline` is a data structure that
 represents either a value, a single unevaluated calculation or a chain of unevaluated calculations. When run, the 
 `Trampoline` evaluates the calculations one by one without growing the stack.
@@ -116,8 +145,9 @@ This is a good time to look at the internals of a `Trampoline`.
 
 A `Trampoline` instance is one of three kinds:
 * `Return(value)` represents an immediate value
-* `Suspend(f)` represents an unevaluated calculation that will return a `Trampoline`
-* `FlatMap(trampoline,f)` represents a `Trampoline` followed by a calculation that will return a new `Trampoline`
+* `Suspend(thunk)` represents an unevaluated calculation that will return a `Trampoline`
+* `FlatMap(trampoline,f)` represents a `Trampoline` followed by a calculation that will take the result of the first
+`Trampoline` and calculate a new `Trampoline`
 
 Each of these are implemented by their corresponding subclass. None of the subclasses are visible to client code.
  
@@ -131,7 +161,7 @@ Where `value` has the type `A`, `Return(value)` has the type `Return<A>`, which 
 
 <img width="190px" height="127px" src="https://rawgit.com/mrbackend/java-trampoline/master/docs/svg/suspend.svg">
 
-A `Suspend` is created using the `suspend(f)` static method.
+A `Suspend` is created using the `public static <A> Trampoline<A> suspend(Supplier<Trampoline<A>> thunk)` method.
 
 `Suspend` is used for postponing tail calls. To prevent a tail call from happening immediately, put the call in a
 `Suspend`, as in `foldLeftAsTrampoline`above.
@@ -151,7 +181,7 @@ A `Suspend` is created using the `suspend(f)` static method.
 recursive, the `run()` method will itself call `run()` recursively. The golden rule is: _Never call `run()`, directly
 or indirectly, from a function that returns a `Trampoline`_.  
 
-Where `f` has the type `Supplier<Trampoline<A>>`, `Suspend(f)` has the type `Suspend<A>`, which is a subtype of `Trampoline<A>`.
+Where `thunk` has the type `Supplier<Trampoline<A>>`, `Suspend(thunk)` has the type `Suspend<A>`, which is a subtype of `Trampoline<A>`.
 
 ### `FlatMap(trampoline,f)`
 
@@ -195,6 +225,9 @@ If the current result is a `FlatMap(Suspend(thunk),f)`, the next result is `Flat
 
 If the current result is a `FlatMap(FlatMap(trampoline,f),g)`, the next result is
 `FlatMap(trampoline,x -> FlatMap(f.apply(x),g))`.
+
+## Test
+[Test](https://mrbackend.github.io/java-trampoline/TEST.html)
 
 ## Acknowledgements
 
