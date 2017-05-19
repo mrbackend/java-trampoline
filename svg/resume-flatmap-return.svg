@@ -12,13 +12,13 @@
                 FlatMap&lt;A,B&gt;
             </text>
         </svg>
-        <svg x="0" y="84" width="127" height="85">
+        <svg x="0" y="84" width="127" height="43">
             <rect x="0.5" y="0.5" width="126" height="42" style="stroke:black;fill-opacity:0.1"/>
             <text x="63.5" y="24.5" fill="black" style="font-family:monospace;text-anchor:middle">
                 Return&lt;A&gt;
             </text>
         </svg>
-        <svg x="168" y="84" width="127" height="85">
+        <svg x="168" y="84" width="127" height="43">
             <rect x="0.5" y="0.5" width="126" height="42" style="stroke:black;stroke-dasharray:4;fill-opacity:0.1"/>
             <text x="63.5" y="24.5" fill="black" style="font-family:monospace;text-anchor:middle">
                 Trampoline&lt;B&gt;

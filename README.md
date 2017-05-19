@@ -2,18 +2,41 @@
 
 [![Build Status](https://travis-ci.org/mrbackend/java-trampoline.svg?branch=master)](https://travis-ci.org/mrbackend/java-trampoline)
 
-## The problem with recursion
+## The problem
 
 Consider the following recursive `List` type:
 ```java
 public abstract class List<A> {
 
-    public abstract int size();
+    public final int size() {
+        return foldLeft((accSize, elem) -> accSize + 1, 0);
+        // or return foldRight((elem, accSize) -> accSize + 1, 0);
+    }
+
+    public final <B> B foldLeft(BiFunction<B, A, B> reduceF, B init) {
+        return visit(
+                () -> init,
+                (head, tail) -> {
+                    B folded = reduceF.apply(init, head);
+                    return tail.foldLeft(reduceF, folded);
+                });
+    }
+
+    public final <B> B foldRight(BiFunction<A, B, B> reduceF, B init) {
+        return visit(
+                () -> init,
+                (head, tail) -> {
+                    B folded = tail.foldRight(reduceF, init);
+                    return reduceF.apply(head, folded);
+                });
+    }
+
+    abstract <B> B visit(Supplier<B> onNil, BiFunction<A, List<A>, B> onCons);
 
     private static final class Nil<A> extends List<A> {
         @Override
-        public int size() {
-            return 0;
+        <B> B visit(Supplier<B> onNil, BiFunction<A, List<A>, B> onCons) {
+            return onNil.get();
         }
     }
 
@@ -27,50 +50,153 @@ public abstract class List<A> {
         }
 
         @Override
-        public int size() {
-            return tail.size() + 1;
+        <B> B visit(Supplier<B> onNil, BiFunction<A, List<A>, B> onCons) {
+            return onCons.apply(head, tail);
         }
     }
 
 }
 ```
+_Example 1: Basic `List` class_
 
-`int size()` is implemented using recursion. However, for large `List`s, running `size()` will overflow the stack.
+(Note: `visit` implements a sort of "functional visitor pattern", but without a separate `Visitor` class. For the
+purpose of presenting our `Trampoline` type, its only role is to help us implement recursion in single methods
+instead of once per subclass, which should make it easier to spot the differences between examples. However, it is a
+useful general purpose pattern to know.) 
+
+`foldLeft` and `foldRight` are general-purpose methods to traverse the `List` from left (first element) to right,
+respectively from right to left. You can see an example of their use by looking at the implementation of `size`. 
+`foldLeft` and `foldRight` are implemented using recursion. However, for large enough `List`s, running any of them will
+overflow the stack.
+
+## The solution
+
+Any tail-recursive algorithm can be rewritten as a loop (See
+[Wikipedia: Tail call](https://en.wikipedia.org/wiki/Tail_call)). That does not apply to all recursive algorithms,
+though. Some data stuctures, such as trees, don't lend themselves well to tail-recursive traversal. Besides, sometimes,
+a loop version of an originally tail-recursive problem may be harder to comprehend than the recursive version.
+
+One solution is using a trampoline. Compare this to the previous `List` implementation:
+```java
+    //...
+    public final <B> B foldLeft(BiFunction<B, A, B> reduceF, B init) {
+        return foldLeftAsTrampoline(reduceF, init).run();
+    }
+
+    private <B> Trampoline<B> foldLeftAsTrampoline(BiFunction<B, A, B> reduceF, B init) {
+        return visit(
+                () -> Trampoline.ret(init),
+                (head, tail) -> {
+                    B folded = reduceF.apply(init, head);
+                    return Trampoline.suspend(() -> tail.foldLeftAsTrampoline(reduceF, folded));
+                });
+    }
+
+    public final <B> B foldRight(BiFunction<A, B, B> reduceF, B init) {
+        return foldRightAsTrampoline(reduceF, init).run();
+    }
+
+    private <B> Trampoline<B> foldRightAsTrampoline(BiFunction<A, B, B> reduceF, B init) {
+        return visit(
+                () -> Trampoline.ret(init),
+                (head, tail) -> {
+                    Trampoline<B> foldedAsTrampoline = tail.foldRightAsTrampoline(reduceF, init);
+                    return foldedAsTrampoline.map(folded -> reduceF.apply(head, folded));
+                });
+    }
+    //...
+```
+Instead of returning a value, the recursive methods return a `Trampoline`. A `Trampoline` is a data structure that
+represents either a value, a single unevaluated calculation or a chain of unevaluated calculations. When run, the 
+`Trampoline` evaluates the calculations one by one without growing the stack.
+
+This is a good time to look at the internals of a `Trampoline`.
+
+## The internals
+
+A `Trampoline` instance is one of three kinds:
+* `Return(value)` represents an immediate value
+* `Suspend(f)` represents an unevaluated calculation that will return a `Trampoline`
+* `FlatMap(trampoline,f)` represents a `Trampoline` followed by a calculation that will return a new `Trampoline`
+
+Each of these are implemented by their corresponding subclass. None of the subclasses are visible to client code.
+ 
+### `Return(value)`
+
+<img width="127px" height="43px" src="https://rawgit.com/mrbackend/java-trampoline/master/svg/return.svg">
+
+Where `value` has the type `A`, `Return(value)` has the type `Return<A>`, which is a subtype of `Trampoline<A>`.
+ 
+### `Suspend(f)`
+
+<img width="190px" height="127px" src="https://rawgit.com/mrbackend/java-trampoline/master/svg/suspend.svg">
+
+A `Suspend` is created using the `suspend(f)` static method.
+
+`Suspend` is used for postponing tail calls. To prevent a tail call from happening immediately, put the call in a
+`Suspend`, as in `foldLeftAsTrampoline`above.
+
+`Suspend` cannot be used to make non-tail calls stack safe. While you might be tempted to write something like
+```java
+    private <B> Trampoline<B> foldRightAsTrampoline(BiFunction<A, B, B> reduceF, B init) {
+        return visit(
+                () -> Trampoline.ret(init),
+                (head, tail) -> {
+                    B folded = tail.foldRightAsTrampoline(reduceF, init).run();
+                    return Trampoline.suspend(() -> Trampoline.ret(reduceF.apply(head, folded)));
+                });
+    }
+```
+, you will still overflow the stack for large `List`s. The problem here is that since `foldRightAsTrampoline` is
+recursive, the `run()` method will itself call `run()` recursively. The golden rule is: _Never call `run()`, directly
+or indirectly, from a function that returns a `Trampoline`_.  
+
+Where `f` has the type `Supplier<Trampoline<A>>`, `Suspend(f)` has the type `Suspend<A>`, which is a subtype of `Trampoline<A>`.
+
+### `FlatMap(trampoline,f)`
+
+<img width="295px" height="127px" src="https://rawgit.com/mrbackend/java-trampoline/master/svg/flatmap.svg">
+
+Where `trampoline` has the type `Trampoline<A>`, and `f` has the type `Function<A,Trampoline<B>>`,
+`FlatMap(trampoline,f)` has the type `FlatMap<A,B>`, which is a subtype of `Trampoline<B>`.
+
+The difference between `map` and `flatMap` is that the function passed to `map` will return a value, whereas the
+function passed to `flatMap` will return a `Trampoline`. `trampoline.map(x -> f.apply(x))` is the same as
+`trampoline.flatMap(x -> Trampoline.ret(f.apply(x)))`.
+
+The name `flatMap` is a shorthand for `flatten(map(...))`. A hypothetical `flatten`method would have had this
+signature: `static <A> Trampoline<A> flatten(Trampoline<Trampoline<A>> trampoline)`, so given 
+`Function<A,Trampoline<B>> f`, `trampoline.flatMap(f)` would have been the same as
+`Trampoline.flatten(trampoline.map(f))`.
 
 ## How it works
-
-Lorem ipsum dolor sit amet, consectetur adipiscing elit. Ut commodo accumsan nunc, ac feugiat tellus. Fusce quis 
-ullamcorper quam. Ut venenatis turpis dolor, vitae pretium tortor feugiat vel. Duis vitae pharetra felis. Mauris
-efficitur ante et ipsum dictum aliquam. Etiam lobortis tempus tortor, sit amet vehicula ipsum volutpat at. Nulla maximus
-finibus dui vitae maximus. Suspendisse mattis dui non neque ullamcorper egestas eu at elit. Mauris tempus gravida
-sodales. Maecenas dapibus laoreet leo, non luctus turpis semper eu. Fusce mauris turpis, faucibus sed porta
-pellentesque, volutpat consectetur odio. Aliquam id purus efficitur, semper metus id, porttitor nulla. Curabitur ac
-sodales nibh. Aenean sed pellentesque lectus. Pellentesque ullamcorper eu sapien sit amet lobortis. Curabitur dolor
-tellus, porta ac enim quis, tempus vestibulum ante.
 
 When a `Trampoline` is evaluated, using `run()`, it is stepwise transformed in a loop. Each step transforms the result closer to a
 `Return(a)`, at which point `a` is returned. The transform performed in each step depends on the structure of the
 current result:
 
+---
 <img width="400px" height="127px" src="https://rawgit.com/mrbackend/java-trampoline/master/svg/resume-suspend.svg">
 
-`resume()` on a `Suspend(f)`
+If the current result is a `Suspend(thunk)`, the next result is `thunk.get()`.
 
+---
 <img width="505px" height="127px" src="https://rawgit.com/mrbackend/java-trampoline/master/svg/resume-flatmap-return.svg">
 
-`resume()` on a `FlatMap(Return(a))`
+If the current result is a `FlatMap(Return(value),f)`, the next result is `f.apply(value)`.
 
+---
 <img width="673px" height="211px" src="https://rawgit.com/mrbackend/java-trampoline/master/svg/resume-flatmap-suspend.svg">
 
-`resume()` on a `FlatMap(Suspend(f))`
+If the current result is a `FlatMap(Suspend(thunk),f)`, the next result is `FlatMap(thunk.get(),f)`
 
+---
 <img width="841px" height="211px" src="https://rawgit.com/mrbackend/java-trampoline/master/svg/resume-flatmap-flatmap.svg">
 
-`resume()` on a `FlatMap(FlatMap(ta,f),g)` 
+If the current result is a `FlatMap(FlatMap(trampoline,f),g)`, the next result is
+`FlatMap(trampoline,x -> FlatMap(f.apply(x),g))`
 
-Cras sollicitudin porta justo, in ultricies ligula tempor ac. Vestibulum suscipit tincidunt auctor. Cras vitae mattis
-dolor. Aenean nec nulla vel felis scelerisque eleifend sed vitae augue. In tempus, tellus id eleifend tincidunt, libero
-turpis aliquam felis, ut tincidunt quam purus vitae orci. Vivamus eget tempus tortor, et ultrices felis. Praesent a
-turpis enim. Donec tempor commodo tellus, a accumsan metus lobortis in. Donec bibendum enim eget nunc aliquet
-efficitur. Donec massa risus, pharetra eu vulputate nec, fermentum et purus. Vestibulum aliquet arcu elit, sed
-fermentum est tempor vel. Duis et placerat sem.
+## Acknowledgements
+
+Thanks to Rúnar Óli Bjarnason for discussing the monadic Trampoline in 
+[Stackless Scala With Free Monads](http://blog.higher-order.com/assets/trampolines.pdf)  
