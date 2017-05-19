@@ -163,10 +163,6 @@ Where `value` has the type `A`, `Return(value)` has the type `Return<A>`, which 
 
 A `Suspend` is created using the `public static <A> Trampoline<A> suspend(Supplier<Trampoline<A>> thunk)` method.
 
-`Suspend` is used for postponing tail calls. To prevent a tail call from happening immediately, put the call in a
-`Suspend`, as in `foldLeftAsTrampoline`above.
-
-`Suspend` cannot be used to make non-tail calls stack safe. While you might be tempted to write something like
 ```java
     private <B> Trampoline<B> foldRightAsTrampoline(BiFunction<A, B, B> reduceF, B init) {
         return visit(
@@ -177,9 +173,9 @@ A `Suspend` is created using the `public static <A> Trampoline<A> suspend(Suppli
                 });
     }
 ```
-, you will still overflow the stack for large `List`s. The problem here is that since `foldRightAsTrampoline` is
-recursive, the `run()` method will itself call `run()` recursively. The golden rule is: _Never call `run()`, directly
-or indirectly, from a function that returns a `Trampoline`_.  
+_Example 3: Won't work_
+
+The golden rule is: _Never call `run()`, directly or indirectly, from a function that returns a `Trampoline`_.  
 
 Where `thunk` has the type `Supplier<Trampoline<A>>`, `Suspend(thunk)` has the type `Suspend<A>`, which is a subtype of `Trampoline<A>`.
 
@@ -225,9 +221,6 @@ If the current result is a `FlatMap(Suspend(thunk),f)`, the next result is `Flat
 
 If the current result is a `FlatMap(FlatMap(trampoline,f),g)`, the next result is
 `FlatMap(trampoline,x -> FlatMap(f.apply(x),g))`.
-
-## Test
-[Test](https://mrbackend.github.io/java-trampoline/TEST.html)
 
 ## Acknowledgements
 
