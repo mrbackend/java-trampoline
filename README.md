@@ -123,13 +123,13 @@ Each of these are implemented by their corresponding subclass. None of the subcl
  
 ### `Return(value)`
 
-<img width="127px" height="43px" src="https://rawgit.com/mrbackend/java-trampoline/master/svg/return.svg">
+<img width="127px" height="43px" src="https://rawgit.com/mrbackend/java-trampoline/master/docs/svg/return.svg">
 
 Where `value` has the type `A`, `Return(value)` has the type `Return<A>`, which is a subtype of `Trampoline<A>`.
  
 ### `Suspend(f)`
 
-<img width="190px" height="127px" src="https://rawgit.com/mrbackend/java-trampoline/master/svg/suspend.svg">
+<img width="190px" height="127px" src="https://rawgit.com/mrbackend/java-trampoline/master/docs/svg/suspend.svg">
 
 A `Suspend` is created using the `suspend(f)` static method.
 
@@ -155,43 +155,43 @@ Where `f` has the type `Supplier<Trampoline<A>>`, `Suspend(f)` has the type `Sus
 
 ### `FlatMap(trampoline,f)`
 
-<img width="295px" height="127px" src="https://rawgit.com/mrbackend/java-trampoline/master/svg/flatmap.svg">
-
-Where `trampoline` has the type `Trampoline<A>`, and `f` has the type `Function<A,Trampoline<B>>`,
-`FlatMap(trampoline,f)` has the type `FlatMap<A,B>`, which is a subtype of `Trampoline<B>`.
+<img width="295px" height="127px" src="https://rawgit.com/mrbackend/java-trampoline/master/docs/svg/flatmap.svg">
 
 The difference between `map` and `flatMap` is that the function passed to `map` will return a value, whereas the
 function passed to `flatMap` will return a `Trampoline`. `trampoline.map(x -> f.apply(x))` is the same as
 `trampoline.flatMap(x -> Trampoline.ret(f.apply(x)))`.
 
-The name `flatMap` is a shorthand for `flatten(map(...))`. A hypothetical `flatten`method would have had this
-signature: `static <A> Trampoline<A> flatten(Trampoline<Trampoline<A>> trampoline)`, so given 
-`Function<A,Trampoline<B>> f`, `trampoline.flatMap(f)` would have been the same as
+The name `flatMap` is a shorthand for `flatten(map(...))`. A hypothetical `flatten`method would have had the
+signature `static <A> Trampoline<A> flatten(Trampoline<Trampoline<A>> trampoline)`, so that given 
+`Function<A, Trampoline<B>> f`, `trampoline.flatMap(f)` would have been the same as
 `Trampoline.flatten(trampoline.map(f))`.
 
-## How it works
+Where `trampoline` has the type `Trampoline<A>`, and `f` has the type `Function<A, Trampoline<B>>`,
+`FlatMap(trampoline, f)` has the type `FlatMap<A, B>`, which is a subtype of `Trampoline<B>`.
+
+## How resume() works
 
 When a `Trampoline` is evaluated, using `run()`, it is stepwise transformed in a loop. Each step transforms the result closer to a
 `Return(a)`, at which point `a` is returned. The transform performed in each step depends on the structure of the
 current result:
 
 ---
-<img width="400px" height="127px" src="https://rawgit.com/mrbackend/java-trampoline/master/svg/resume-suspend.svg">
+<img width="400px" height="127px" src="https://rawgit.com/mrbackend/java-trampoline/master/docs/svg/resume-suspend.svg">
 
 If the current result is a `Suspend(thunk)`, the next result is `thunk.get()`.
 
 ---
-<img width="505px" height="127px" src="https://rawgit.com/mrbackend/java-trampoline/master/svg/resume-flatmap-return.svg">
+<img width="505px" height="127px" src="https://rawgit.com/mrbackend/java-trampoline/master/docs/svg/resume-flatmap-return.svg">
 
 If the current result is a `FlatMap(Return(value),f)`, the next result is `f.apply(value)`.
 
 ---
-<img width="673px" height="211px" src="https://rawgit.com/mrbackend/java-trampoline/master/svg/resume-flatmap-suspend.svg">
+<img width="673px" height="211px" src="https://rawgit.com/mrbackend/java-trampoline/master/docs/svg/resume-flatmap-suspend.svg">
 
 If the current result is a `FlatMap(Suspend(thunk),f)`, the next result is `FlatMap(thunk.get(),f)`
 
 ---
-<img width="841px" height="211px" src="https://rawgit.com/mrbackend/java-trampoline/master/svg/resume-flatmap-flatmap.svg">
+<img width="841px" height="211px" src="https://rawgit.com/mrbackend/java-trampoline/master/docs/svg/resume-flatmap-flatmap.svg">
 
 If the current result is a `FlatMap(FlatMap(trampoline,f),g)`, the next result is
 `FlatMap(trampoline,x -> FlatMap(f.apply(x),g))`
