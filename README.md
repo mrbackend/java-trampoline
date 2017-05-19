@@ -188,13 +188,13 @@ If the current result is a `FlatMap(Return(value),f)`, the next result is `f.app
 ---
 <img width="673px" height="211px" src="https://rawgit.com/mrbackend/java-trampoline/master/docs/svg/resume-flatmap-suspend.svg">
 
-If the current result is a `FlatMap(Suspend(thunk),f)`, the next result is `FlatMap(thunk.get(),f)`
+If the current result is a `FlatMap(Suspend(thunk),f)`, the next result is `FlatMap(thunk.get(),f)`.
 
 ---
 <img width="841px" height="211px" src="https://rawgit.com/mrbackend/java-trampoline/master/docs/svg/resume-flatmap-flatmap.svg">
 
 If the current result is a `FlatMap(FlatMap(trampoline,f),g)`, the next result is
-`FlatMap(trampoline,x -> FlatMap(f.apply(x),g))`
+`FlatMap(trampoline,x -> FlatMap(f.apply(x),g))`.
 
 ## Acknowledgements
 
