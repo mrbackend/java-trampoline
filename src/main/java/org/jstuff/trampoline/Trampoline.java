@@ -1,6 +1,5 @@
 package org.jstuff.trampoline;
 
-import java.util.Objects;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
@@ -22,6 +21,8 @@ public abstract class Trampoline<A> {
         return new Return<>(value);
     }
 
+    private static final Trampoline<Object> RETURN_DUMMY = ret(new Object());
+
     /**
      * Creates a Trampoline that represents a thunk (an unevaluated calculation).
      *
@@ -30,22 +31,22 @@ public abstract class Trampoline<A> {
      * @return A new Trampoline that represents the unevaluated calculation.
      */
     public static <A> Trampoline<A> suspend(Supplier<Trampoline<A>> thunk) {
-        return new Suspend<>(thunk);
+        return RETURN_DUMMY.flatMap(ignored -> thunk.get());
     }
 
     private Trampoline() {
     }
 
     /**
-     * Runs this Trampoline in constant stack space (disregarding the stack space which is consumed by
-     * the functions that are used to construct this Trampoline).
+     * Runs this Trampoline in constant stack space (disregarding the stack space that is consumed by
+     * the functions used to construct this Trampoline).
      *
      * @return The calculated value
      */
     public final A run() {
         Trampoline<A> curr = this;
-        while (!(curr instanceof Return)) {
-            curr = curr.resume();
+        while (curr instanceof FlatMap) {
+            curr = ((FlatMap<?, A>) curr).resume();
         }
         return ((Return<A>) curr).value;
     }
@@ -59,7 +60,7 @@ public abstract class Trampoline<A> {
      * @return A new Trampoline that represents the application of f to this Trampoline
      */
     public final <B> Trampoline<B> map(Function<A, B> f) {
-        return flatMap(a -> ret(f.apply(a)));
+        return flatMap(value -> ret(f.apply(value)));
     }
 
     /**
@@ -75,15 +76,6 @@ public abstract class Trampoline<A> {
         return new FlatMap<>(this, f);
     }
 
-    /*
-     * resume(Return(x)) = Return(x)
-     * resume(Suspend(f)) = f.get()
-     * resume(FlatMap(Return(x), f)) = f.apply(x)
-     * resume(FlatMap(Suspend(f), g)) = FlatMap(f.get(), g)
-     * resume(FlatMap(FlatMap(a, f), g)) = FlatMap(a, x -> FlatMap(f.apply(x), g))
-     */
-    abstract Trampoline<A> resume();
-
     abstract <B> Trampoline<B> applyFlatMap(Function<A, Trampoline<B>> f);
 
 
@@ -96,11 +88,6 @@ public abstract class Trampoline<A> {
         }
 
         @Override
-        Trampoline<A> resume() {
-            return this;
-        }
-
-        @Override
         <B> Trampoline<B> applyFlatMap(Function<A, Trampoline<B>> f) {
             return f.apply(value);
         }
@@ -108,45 +95,27 @@ public abstract class Trampoline<A> {
     }
 
 
-    private static final class Suspend<A> extends Trampoline<A> {
+    private static final class FlatMap<A, B> extends Trampoline<B> {
 
-        private final Supplier<Trampoline<A>> thunk;
+        private final Trampoline<A> trampoline;
+        private final Function<A, Trampoline<B>> nextTrampolineF;
 
-        private Suspend(Supplier<Trampoline<A>> thunk) {
-            this.thunk = Objects.requireNonNull(thunk);
-        }
-
-        @Override
-        Trampoline<A> resume() {
-            return thunk.get();
-        }
-
-        @Override
-        <B> Trampoline<B> applyFlatMap(Function<A, Trampoline<B>> f) {
-            return thunk.get().flatMap(f);
-        }
-
-    }
-
-
-    private static final class FlatMap<X, A> extends Trampoline<A> {
-
-        private final Trampoline<X> trampoline;
-        private final Function<X, Trampoline<A>> nextTrampolineF;
-
-        private FlatMap(Trampoline<X> trampoline, Function<X, Trampoline<A>> nextTrampolineF) {
+        private FlatMap(Trampoline<A> trampoline, Function<A, Trampoline<B>> nextTrampolineF) {
             this.trampoline = trampoline;
             this.nextTrampolineF = nextTrampolineF;
         }
 
-        @Override
-        Trampoline<A> resume() {
+        /*
+         * resume(FlatMap(Return(x), f)) = f.apply(x)
+         * resume(FlatMap(FlatMap(a, f), g)) = FlatMap(a, x -> FlatMap(f.apply(x), g))
+         */
+        private Trampoline<B> resume() {
             return trampoline.applyFlatMap(nextTrampolineF);
         }
 
         @Override
-        <B> Trampoline<B> applyFlatMap(Function<A, Trampoline<B>> f) {
-            return trampoline.flatMap(x -> nextTrampolineF.apply(x).flatMap(f));
+        <C> Trampoline<C> applyFlatMap(Function<B, Trampoline<C>> f) {
+            return trampoline.flatMap(value -> nextTrampolineF.apply(value).flatMap(f));
         }
 
     }

@@ -35,6 +35,22 @@ public final class TrampolineTest {
     }
 
     @Test
+    @SuppressWarnings("JUnitTestMethodWithNoAssertions")
+    public void testSuspendIsStackSafe() {
+        // Given
+        Trampoline<Integer> instance = suspended(1293394316, 100000);
+
+        // When
+        instance.run();
+    }
+
+    private static Trampoline<Integer> suspended(int x, int depth) {
+        return (depth == 0) ?
+                Trampoline.ret(x) :
+                Trampoline.suspend(() -> suspended(x, depth - 1));
+    }
+
+    @Test
     public void testMapOnRet() {
         // Given
         Trampoline<Integer> instance = Trampoline.ret(-2027639537);

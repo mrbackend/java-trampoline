@@ -56,7 +56,6 @@ public abstract class List<A> {
             return onCons.apply(head, tail);
         }
     }
-
 }
 ```
 _Example 1: Stack-unsafe `List` class_
@@ -83,6 +82,7 @@ a loop version of an originally tail-recursive solution may be harder to compreh
 
 One solution is using a trampoline. Compare these implementations of `foldLeft` and `foldRight`:
 ```java
+public abstract class List<A> {
     //...
     public final <B> B foldLeft(BiFunction<B, A, B> reduceF, B init) {
         return visit(
@@ -102,10 +102,12 @@ One solution is using a trampoline. Compare these implementations of `foldLeft` 
                 });
     }
     //...
+}
 ```
 _Example 1 excerpt: Stack-unsafe folds_
 
 ```java
+public abstract class List<A> {
     //...
     public final <B> B foldLeft(BiFunction<B, A, B> reduceF, B init) {
         return foldLeftAsTrampoline(reduceF, init).run();
@@ -128,13 +130,13 @@ _Example 1 excerpt: Stack-unsafe folds_
     private <B> Trampoline<B> foldRightAsTrampoline(BiFunction<A, B, B> reduceF, B init) {
         return visit(
                 () -> Trampoline.ret(init),
-                (head, tail) -> {
-                    Trampoline<B> foldedAsTrampoline = Trampoline.suspend(() -> 
-                        tail.foldRightAsTrampoline(reduceF, init));
-                    return foldedAsTrampoline.map(folded -> reduceF.apply(head, folded));
-                });
+                (head, tail) -> Trampoline.suspend(() -> {
+                        Trampoline<B> foldedAsTrampoline = tail.foldRightAsTrampoline(reduceF, init);
+                        return foldedAsTrampoline.map(folded -> reduceF.apply(head, folded));
+                    }));
     }
     //...
+}
 ```
 _Example 2: Stack-safe folds_
 
