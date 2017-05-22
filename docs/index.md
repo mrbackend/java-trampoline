@@ -101,6 +101,7 @@ One solution is using a trampoline. Compare these implementations of `foldLeft` 
                     return reduceF.apply(head, folded);
                 });
     }
+    //...
 ```
 _Example 1 excerpt: Stack-unsafe folds_
 
@@ -115,7 +116,8 @@ _Example 1 excerpt: Stack-unsafe folds_
                 () -> Trampoline.ret(init),
                 (head, tail) -> {
                     B folded = reduceF.apply(init, head);
-                    return Trampoline.suspend(() -> tail.foldLeftAsTrampoline(reduceF, folded));
+                    return Trampoline.suspend(() -> 
+                        tail.foldLeftAsTrampoline(reduceF, folded));
                 });
     }
 
@@ -127,7 +129,8 @@ _Example 1 excerpt: Stack-unsafe folds_
         return visit(
                 () -> Trampoline.ret(init),
                 (head, tail) -> {
-                    Trampoline<B> foldedAsTrampoline = Trampoline.suspend(() -> tail.foldRightAsTrampoline(reduceF, init));
+                    Trampoline<B> foldedAsTrampoline = Trampoline.suspend(() -> 
+                        tail.foldRightAsTrampoline(reduceF, init));
                     return foldedAsTrampoline.map(folded -> reduceF.apply(head, folded));
                 });
     }

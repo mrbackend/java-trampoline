@@ -157,7 +157,8 @@ public final class TrampolineTest {
     public void testFlatMapFromRetToFlatMapped() {
         // Given
         Trampoline<Integer> instance = Trampoline.ret(-1701222901);
-        Function<Integer, Trampoline<Integer>> f = x -> Trampoline.ret(858780315).flatMap(y -> Trampoline.ret(x + y + 637589551));
+        Function<Integer, Trampoline<Integer>> f =
+                x -> Trampoline.ret(858780315).flatMap(y -> Trampoline.ret(x + y + 637589551));
 
         // When
         Trampoline<Integer> actual = instance.flatMap(f);
@@ -217,7 +218,8 @@ public final class TrampolineTest {
     public void testFlatMapFromSuspendToFlatMapped() {
         // Given
         Trampoline<Integer> instance = Trampoline.suspend(() -> Trampoline.ret(-1104440380));
-        Function<Integer, Trampoline<Integer>> f = x -> Trampoline.ret(843528009).flatMap(y -> Trampoline.ret(x + y + 1659767107));
+        Function<Integer, Trampoline<Integer>> f =
+                x -> Trampoline.ret(843528009).flatMap(y -> Trampoline.ret(x + y + 1659767107));
 
         // When
         Trampoline<Integer> actual = instance.flatMap(f);
@@ -277,7 +279,8 @@ public final class TrampolineTest {
     public void testFlatMapFromMappedToFlatMapped() {
         // Given
         Trampoline<Integer> instance = Trampoline.ret(-1317792119).map(x -> x - 1736441694);
-        Function<Integer, Trampoline<Integer>> f = x -> Trampoline.ret(1120352122).flatMap(y -> Trampoline.ret(x + y + 2122991623));
+        Function<Integer, Trampoline<Integer>> f =
+                x -> Trampoline.ret(1120352122).flatMap(y -> Trampoline.ret(x + y + 2122991623));
 
         // When
         Trampoline<Integer> actual = instance.flatMap(f);
@@ -337,7 +340,8 @@ public final class TrampolineTest {
     public void testFlatMapFromFlatMappedToFlatMapped() {
         // Given
         Trampoline<Integer> instance = Trampoline.ret(-179065790).flatMap(x -> Trampoline.ret(x - 26564703));
-        Function<Integer, Trampoline<Integer>> f = x -> Trampoline.ret(-1470929881).flatMap(y -> Trampoline.ret((x + y) - 1103607279));
+        Function<Integer, Trampoline<Integer>> f =
+                x -> Trampoline.ret(-1470929881).flatMap(y -> Trampoline.ret((x + y) - 1103607279));
 
         // When
         Trampoline<Integer> actual = instance.flatMap(f);
