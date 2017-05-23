@@ -36,7 +36,7 @@ public class TreeOps {
 ```
 _Example 2: A recursive traversal algorithm_
 
-`foldLeft` does a prefix traversal ()from left to right), applying `reduce` to each leaf value to accumulate a result.
+`foldLeft` does a prefix traversal (from left to right), applying `reduce` to each leaf value to accumulate a result.
 The accumulator is initialized with the value of `init`. Spend a little time to understand this algorithm before
 proceeding.
 
@@ -47,6 +47,6 @@ could become very unbalanced, leaning either to the left or the right.
 Now, tail recursive algorithms can always be rewritten as a loop (see 
 [Wikiedia: Tail call](https://en.wikipedia.org/wiki/Tail_call)), but this algorithm is not, and can't be rewritten to
 be, tail recursive. You have two options here:
-* Rewrite the algorithm to use an explicit stack that's located on the heap, or
+* Rewrite the algorithm to use an explicit stack that resides on the heap, or
 * Use a trampoline
 
