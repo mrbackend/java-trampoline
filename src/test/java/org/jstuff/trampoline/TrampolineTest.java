@@ -1,8 +1,10 @@
 package org.jstuff.trampoline;
 
+import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.function.Function;
+import java.util.function.Supplier;
 
 import static org.junit.Assert.assertEquals;
 
@@ -19,6 +21,14 @@ public final class TrampolineTest {
         // Then
         int actualResult = actual.run();
         assertEquals(value, actualResult);
+    }
+
+    @Test
+    public void testSuspendNull() {
+        // When - Then
+        expectException(
+                () -> Trampoline.suspend(null),
+                NullPointerException.class);
     }
 
     @Test
@@ -48,6 +58,17 @@ public final class TrampolineTest {
         return (depth == 0) ?
                 Trampoline.ret(x) :
                 Trampoline.suspend(() -> suspended(x, depth - 1));
+    }
+
+    @Test
+    public void testMapNull() {
+        // Given
+        Trampoline<Integer> instance = Trampoline.ret(0);
+
+        // When - Then
+        expectException(
+                () -> instance.map(null),
+                NullPointerException.class);
     }
 
     @Test
@@ -122,6 +143,17 @@ public final class TrampolineTest {
 
         // When
         instance.run();
+    }
+
+    @Test
+    public void testFlatMapNull() {
+        // Given
+        Trampoline<Integer> instance = Trampoline.ret(0);
+
+        // When - Then
+        expectException(
+                () -> instance.flatMap(null),
+                NullPointerException.class);
     }
 
     @Test
@@ -396,6 +428,20 @@ public final class TrampolineTest {
         return (depth == 0) ?
                 Trampoline.ret(x - 391018460) :
                 Trampoline.ret(1480669361).flatMap(y -> rightHeavy((x + y) - 1332171485, depth - 1));
+    }
+
+    private static <A> void expectException(
+            Supplier<A> thunkThatIsExpectedToThrowException,
+            Class<? extends Exception> expectedExceptionClass) {
+
+        try {
+            thunkThatIsExpectedToThrowException.get();
+            Assert.fail(String.format("Expected exception %s, but none was thrown", expectedExceptionClass));
+        } catch (Exception actualException) {
+            if (!expectedExceptionClass.isInstance(actualException)) {
+                Assert.fail(String.format("Expected exception %s, but got %s", expectedExceptionClass, actualException));
+            }
+        }
     }
 
 }

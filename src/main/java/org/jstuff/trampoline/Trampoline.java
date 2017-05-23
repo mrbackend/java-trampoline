@@ -1,5 +1,6 @@
 package org.jstuff.trampoline;
 
+import java.util.Objects;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
@@ -11,9 +12,9 @@ import java.util.function.Supplier;
 public abstract class Trampoline<A> {
 
     /**
-     * Creates a Trampoline that represents a constant value.
+     * Creates a {@code Trampoline} that represents a constant value.
      *
-     * @param value The value which will be returned by this Trampoline.
+     * @param value The value which will be returned by this {@code Trampoline}.
      * @param <A>   The type of the value
      * @return A new Trampoline that represents the value.
      */
@@ -21,16 +22,21 @@ public abstract class Trampoline<A> {
         return new Return<>(value);
     }
 
-    private static final Trampoline<Object> RETURN_DUMMY = ret(new Object());
+    /*
+     * Used to encode suspend as a flatMap
+     */
+    private static final Trampoline<Object> RETURN_DUMMY = ret(null);
 
     /**
-     * Creates a Trampoline that represents a thunk (an unevaluated calculation).
+     * Creates a {@code Trampoline} that represents a thunk (an unevaluated calculation).
      *
      * @param thunk A Supplier that will return a value
      * @param <A>   The type of the value
      * @return A new Trampoline that represents the unevaluated calculation.
+     * @throws NullPointerException if thunk is null
      */
     public static <A> Trampoline<A> suspend(Supplier<Trampoline<A>> thunk) {
+        Objects.requireNonNull(thunk, "thunk");
         return RETURN_DUMMY.flatMap(ignored -> thunk.get());
     }
 
@@ -38,8 +44,8 @@ public abstract class Trampoline<A> {
     }
 
     /**
-     * Runs this Trampoline in constant stack space (disregarding the stack space that is consumed by
-     * the functions used to construct this Trampoline).
+     * Evaluates this {@code Trampoline} in constant stack space (disregarding the stack space that is consumed by
+     * the functions used to construct this {@code Trampoline}).
      *
      * @return The calculated value
      */
@@ -52,31 +58,38 @@ public abstract class Trampoline<A> {
     }
 
     /**
-     * Creates a Trampoline that represents an evaluation of this Trampoline, followed by a calculation
-     * that transforms the result of this Trampoline to another value.
+     * Creates a {@code Trampoline} that will return the result of applying the passed function to the result of this
+     * {@code Trampoline}.
      *
-     * @param f   The function used to transform the result of this Trampoline
-     * @param <B> The type of the Transformed value
-     * @return A new Trampoline that represents the application of f to this Trampoline
+     * @param getTransformedValue The function used to transform the result of this Trampoline
+     * @param <B>                 The transformed value's type
+     * @return A new Trampoline that represents the application of getTransformedValue to the result of this Trampoline
+     * @throws NullPointerException if getTransformedValue is null
      */
-    public final <B> Trampoline<B> map(Function<A, B> f) {
-        return flatMap(value -> ret(f.apply(value)));
+    public final <B> Trampoline<B> map(Function<A, B> getTransformedValue) {
+        Objects.requireNonNull(getTransformedValue, "getTransformedValue");
+        return flatMap(value -> ret(getTransformedValue.apply(value)));
     }
 
     /**
-     * Creates a Trampoline that represents an evaluation of this Trampoline, followed by a calculation
-     * that produces a new Trampoline. This can be viewed as the sequence of two Trampolines, where the second
-     * Trampoline depends on the result of this Trampoline.
+     * Creates a {@code Trampoline} that will return the result of the {@code Trampoline} that's returned from applying
+     * the passed function to the result of this {@code Trampoline}.
      *
-     * @param f   The function used to calculate the next Trampoline
-     * @param <B> The type of the value returned by the next Trampoline (and, consequently, by the new Trampoline)
+     * @param calcNextTrampoline The function used to calculate the next Trampoline
+     * @param <B>                The type of the value returned by the next Trampoline (and, consequently, the returned
+     *                           Trampoline)
      * @return A new Trampoline that represents the sequence of this Trampoline followed by the next Trampoline
+     * @throws NullPointerException if calcNextTrampoline is null
      */
-    public final <B> Trampoline<B> flatMap(Function<A, Trampoline<B>> f) {
-        return new FlatMap<>(this, f);
+    public final <B> Trampoline<B> flatMap(Function<A, Trampoline<B>> calcNextTrampoline) {
+        Objects.requireNonNull(calcNextTrampoline, "calcNextTrampoline");
+        return new FlatMap<>(this, calcNextTrampoline);
     }
 
-    abstract <B> Trampoline<B> applyFlatMap(Function<A, Trampoline<B>> f);
+    /*
+     * Apply the parent's calcNextTrampoline function to the result of this Trampoline
+     */
+    abstract <B> Trampoline<B> applyFlatMap(Function<A, Trampoline<B>> parentCalcNextTrampoline);
 
 
     private static final class Return<A> extends Trampoline<A> {
@@ -88,8 +101,8 @@ public abstract class Trampoline<A> {
         }
 
         @Override
-        <B> Trampoline<B> applyFlatMap(Function<A, Trampoline<B>> f) {
-            return f.apply(value);
+        <B> Trampoline<B> applyFlatMap(Function<A, Trampoline<B>> parentCalcNextTrampoline) {
+            return parentCalcNextTrampoline.apply(value);
         }
 
     }
@@ -98,24 +111,27 @@ public abstract class Trampoline<A> {
     private static final class FlatMap<A, B> extends Trampoline<B> {
 
         private final Trampoline<A> trampoline;
-        private final Function<A, Trampoline<B>> nextTrampolineF;
+        private final Function<A, Trampoline<B>> calcNextTrampoline;
 
-        private FlatMap(Trampoline<A> trampoline, Function<A, Trampoline<B>> nextTrampolineF) {
+        private FlatMap(Trampoline<A> trampoline, Function<A, Trampoline<B>> calcNextTrampoline) {
             this.trampoline = trampoline;
-            this.nextTrampolineF = nextTrampolineF;
+            this.calcNextTrampoline = calcNextTrampoline;
         }
 
         /*
-         * resume(FlatMap(Return(x), f)) = f.apply(x)
-         * resume(FlatMap(FlatMap(a, f), g)) = FlatMap(a, x -> FlatMap(f.apply(x), g))
+         * Transforms this Trampoline to one that's one step closer to a Return(value)
+         *
+         * resume(FlatMap(Return(value), calcNextTrampoline)) ==> calcNextTrampoline.apply(value)
+         * resume(FlatMap(FlatMap(trampoline, calcNextTrampoline), parentCalcNextTrampoline)) ==>
+         *    FlatMap(trampoline, value -> FlatMap(calcNextTrampoline.apply(value), parentCalcNextTrampoline))
          */
         private Trampoline<B> resume() {
-            return trampoline.applyFlatMap(nextTrampolineF);
+            return trampoline.applyFlatMap(calcNextTrampoline);
         }
 
         @Override
-        <C> Trampoline<C> applyFlatMap(Function<B, Trampoline<C>> f) {
-            return trampoline.flatMap(value -> nextTrampolineF.apply(value).flatMap(f));
+        <C> Trampoline<C> applyFlatMap(Function<B, Trampoline<C>> parentCalcNextTrampoline) {
+            return trampoline.flatMap(value -> calcNextTrampoline.apply(value).flatMap(parentCalcNextTrampoline));
         }
 
     }
