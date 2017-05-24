@@ -1,6 +1,4 @@
-# User guide
-
-## The stack safety problem
+# The stack safety problem
 
 That a program is stack safe means that it won't overflow the stack, even for infinitely large input. Stack safety is
 closely related to recursive algorithms, since deep recursion normally requires a large stack.  
@@ -54,7 +52,7 @@ Now, a tail recursive algorithm can always be rewritten as a loop (see
 to be, tail recursive. To make it stack safe, we can either rewrite the algorithm to use an explicit stack that resides
 on the heap, or &mdash;
  
-## Use a trampoline
+# Use a trampoline
 
 A trampoline is a data structure that represents either an unevaluated calculation or a single value. Alternatively, it
 can be viewed as a value that will be resolved later. Instead of running methods/functions immediately, we put them into
@@ -91,7 +89,7 @@ _Example 3: A stack safe recursive traversal algorithm_
 root is done at this point. There is a one-to-one correspondence between each part of `trampolinedFoldLeft` and 
 Example 2's `foldLeft`. Let's look at the available `Trampoline` methods.
 
-#### `ret`
+## `ret`
 
 Signature: `public static <A> Trampoline<A> ret(A value)`
 
@@ -100,7 +98,7 @@ value is returned.
 
 The purpose of `ret` method is to represent the bottom values of recursions.
 
-##### `suspend`
+## `suspend`
 
 Signature: `public static <A> Trampoline<A> suspend(Supplier<Trampoline<A>> thunk)`
 
@@ -110,7 +108,7 @@ A thunk is an unevaluated function that takes no parameters. When the resulting 
 The purpose of `suspend` is to avoid an immediate recursion, instead returning a trampoline that represents the
 recursion to be run later.
 
-###### `map`
+## `map`
 
 Signature: `public static <B> Trampoline<B> map(Function<A,B> transformValue)`
 
@@ -124,7 +122,7 @@ instead of `map`.
 
 Calling `map(transformValue)` is synonymous to calling `flatMap(value -> Trampoline.ret(transformValue.apply(value))`.
 
-####### `flatMap`
+## `flatMap`
 
 Signature: `public <B> Trampoline<A> flatMap(Function<A,Trampoline<B>> getNextTrampoline)`
 
@@ -134,14 +132,14 @@ Signature: `public <B> Trampoline<A> flatMap(Function<A,Trampoline<B>> getNextTr
 
 The purpose of `flatMap` is to chain two recursions where the second recursion depends on the first one.
 
-######## `run`
+## `run`
 
 Signature: `public A run()`
 
 `run` evaluates a trampoline by evaluating each of the functions and sub-trampolines used to create the trampoline.
 The trick is that each of these steps is done in a loop, such that the stack does not grow during the evaluation.
 
-## The stack safe `foldLeft` explained
+# The stack safe `foldLeft` explained
 
 ```java
 leafValue -> Trampoline.ret(reduce.apply(init, leafValue))
@@ -188,7 +186,7 @@ resulting trampoline faster, postponing the time consuming calculation until the
 Correspondingly, if `trampolinedFoldLeft` did a time consuming calculation before calling `tree.visit`, `foldLeft`
 would return faster if it used `suspend` on the initial call to `trampolinedFoldLeft`.
 
-## Don't do this
+# Don't do this
 
 A developer who's unfamiliar with trampolines might try to write the two-children branch like this:
 ```java
@@ -207,17 +205,19 @@ A sign that you're doing it wrong is if you call `run` inside a method that retu
 the trampoline you're running is unrelated (that is, not using any of the same recursive methods) to the one you're
 creating, but even in that case it is safer (with regards to maintainability) to use `map`/`flatMap`.
 
-## Why is it called "Trampoline"?
+# Why is it called &mdash;
+
+## "Trampoline"?
 
 While running a trampoline, the stack returns to the same state between each step. If you look at a stack trace while
 stepping through a trampolined calculation, you will observe this. It's like the stack pointer jumps up and down.
 
-## Why is it called "map"?
+## "map"?
 
 "Mapping" is a mathematical term which basically means associating a value in one domain with a value in another domain.
 The `transformValue` function passed to `map` represents such a mapping.
 
-## Why is it called "flatMap"?
+## "flatMap"?
 
 Imagine that there existed a function 
 `static <A> Trampoline<A> flatten(Trampoline<Trampoline<A>> trampolinedTrampoline)`. Simply by studying the signature, 
