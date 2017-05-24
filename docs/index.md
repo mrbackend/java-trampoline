@@ -12,7 +12,7 @@ Read this if you want to understand the mechanics behind trampolines.
 
 # Javadoc
 
-[Javadoc](https://mrbackend.github.io/java-trampoline/apidocs)
+[Javadoc](https://mrbackend.github.io/java-trampoline/apidocs/)
 
 # Acknowledgements
 
