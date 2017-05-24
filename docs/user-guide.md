@@ -1,4 +1,4 @@
-#User guide
+# User guide
 
 ## The stack safety problem
 
@@ -20,9 +20,9 @@ Branches of this tree type can have either one or two children. None of the bran
 leaf, however, has a value of type `A`. You might notice that there is no way that this type can represent an empty
 tree. That doesn't matter much, this example is for instructional purposes only.
  
-As it happens, this simple interface is all we need to inspect and traverse the tree. The `visit` method realizes kind
-of a functional visitor pattern, but without the need for a separate `TreeVisitor` class. Instead, we must provide three
-callbacks, one for each node type.
+As it happens, this simple interface is all we need to inspect and traverse the tree. The `visit` method realizes a kind
+of functional [visitor pattern](https://en.wikipedia.org/wiki/Visitor_pattern), but without the need for a separate 
+`TreeVisitor` class. Instead, we must provide three callbacks, one for each node type.
 
 We can make a very general purpose method for recursively traversing the leaves of a `Tree`:
 ```java
@@ -78,10 +78,10 @@ public final class TreeOps {
                 leafValue -> Trampoline.ret(reduce.apply(init, leafValue)),
                 child -> Trampoline.suspend(() -> trampolinedFoldLeft(child, reduce, init)),
                 (leftChild, rightChild) -> {
-                    Trampoline<B> leftAccTrampoline = Trampoline.suspend(
-                            () -> trampolinedFoldLeft(leftChild, reduce, init));
-                    Trampoline<B> resultAccTrampoline = leftAccTrampoline.flatMap(
-                            leftAcc -> trampolinedFoldLeft(rightChild, reduce, leftAcc));
+                    Trampoline<B> leftAccTrampoline = Trampoline.suspend(() ->
+                            trampolinedFoldLeft(leftChild, reduce, init));
+                    Trampoline<B> resultAccTrampoline = leftAccTrampoline.flatMap(leftAcc ->
+                            trampolinedFoldLeft(rightChild, reduce, leftAcc));
                     return resultAccTrampoline;
                 });
     }
@@ -91,57 +91,8 @@ _Example 3: A stack safe recursive traversal algorithm_
 
 `trampolinedFoldLeft` is a recursive method that immediately returns a `Trampoline` instance; only one `visit` at the
 root is done at this point. There is a one-to-one correspondence between each part of `trampolinedFoldLeft` and 
-Example 2's `foldLeft`. Let's look at the available `Trampoline` methods.
-
-### ret
-
-Signature: `public static <A> Trampoline<A> ret(A value)`
-
-`ret` takes a single value and returns a trampoline that wraps this value. When the resulting trampoline is run, the
-value is returned.
-
-The purpose of `ret` method is to represent the bottom values of recursions.
-
-### suspend
-
-Signature: `public static <A> Trampoline<A> suspend(Supplier<Trampoline<A>> thunk)`
-
-A thunk is an unevaluated function that takes no parameters. When the resulting trampoline is run, it will evaluate
-`thunk` to get a new trampoline and then run that one to get and return its result.
-
-The purpose of `suspend` is to avoid an immediate recursion, instead returning a trampoline that represents the
-recursion to be run later.
-
-### map
-
-Signature: `public static <B> Trampoline<B> map(Function<A,B> transformValue)`
-
-`map` takes a function parameter that, when evaluated will return a new value that depends on the result of "this"
-trampoline. When the resulting trampoline is run, it will first run "this" trampoline, then call `transformValue`
-and return its result.
-
-The purpose of `map` is to transform the resulting value of a trampoline. The transform must be stack safe; if a deep
-recursion is performed to transform the value, it should be wrapped in a trampoline instead, and passed to `flatMap`
-instead of `map`.
-
-Calling `map(transformValue)` is synonymous to calling `flatMap(value -> Trampoline.ret(transformValue.apply(value))`.
-
-### flatMap
-
-Signature: `public <B> Trampoline<A> flatMap(Function<A,Trampoline<B>> getNextTrampoline)`
-
-`flatMap` takes a function parameter that, when evaluated will return a new trampoline that depends on the result of
-"this" trampoline. When the resulting trampoline is run, it will first run "this" trampoline, then call 
-`getNextTrampoline` to get a new trampoline, and finally run the new trampoline and return its result.
-
-The purpose of `flatMap` is to chain two recursions where the second recursion depends on the first one.
-
-### run
-
-Signature: `public A run()`
-
-`run` evaluates a trampoline by evaluating each of the functions and sub-trampolines used to create the trampoline.
-The trick is that each of these steps is done in a loop, such that the stack does not grow during the evaluation.
+Example 2's `foldLeft`. Before proceeding, have a look at the 
+[Javadoc](https://mrbackend.github.io/java-trampoline/apidocs/) to learn about the `Trampoline` methods.
 
 ## The stack safe `foldLeft` explained
 
@@ -160,10 +111,10 @@ call in a `suspend`, creating a trampoline that will do the recursive call later
 
 ```java
 (leftChild, rightChild) -> {
-    Trampoline<B> leftAccTrampoline =
-        Trampoline.suspend(() -> trampolinedFoldLeft(leftChild, reduce, init));
-    Trampoline<B> resultAccTrampoline =
-        leftAccTrampoline.flatMap(leftAcc -> trampolinedFoldLeft(rightChild, reduce, leftAcc));
+    Trampoline<B> leftAccTrampoline = Trampoline.suspend(() ->
+            trampolinedFoldLeft(leftChild, reduce, init));
+    Trampoline<B> resultAccTrampoline = leftAccTrampoline.flatMap(leftAcc ->
+            trampolinedFoldLeft(rightChild, reduce, leftAcc));
     return resultAccTrampoline;
 }
 ```
@@ -177,8 +128,8 @@ The last callback could also have been written as:
 ```java
 (leftChild, rightChild) -> Trampoline.suspend(() -> {
     Trampoline<B> leftAccTrampoline = trampolinedFoldLeft(leftChild, reduce, init);
-    Trampoline<B> resultAccTrampoline =
-        leftAccTrampoline.flatMap(leftAcc -> trampolinedFoldLeft(rightChild, reduce, leftAcc));
+    Trampoline<B> resultAccTrampoline = leftAccTrampoline.flatMap(leftAcc ->
+            trampolinedFoldLeft(rightChild, reduce, leftAcc));
     return resultAccTrampoline;
 })
 ```
@@ -189,7 +140,7 @@ resulting trampoline faster, postponing the time consuming calculation until the
 
 ## Don't do this
 
-A developer who's unfamiliar with trampolines might try to write the two-children branch like this:
+A developer who's unfamiliar with trampolines might try to write the two-children branch traversal like this:
 ```java
 (leftChild, rightChild) -> Trampoline.suspend(() -> {
     B leftAcc = trampolinedFoldLeft(leftChild, reduce, init).run();
@@ -198,13 +149,30 @@ A developer who's unfamiliar with trampolines might try to write the two-childre
 })
 ```
 This is not stack safe. The reason is that when `run` is called, the corresponding code for child nodes is
-"unsuspended", forcing the "unsuspension" of their child nodes and so on. The golden rule is:
+"unsuspended", forcing the "unsuspension" of their child nodes and so on until the bottom of the recursion, possibly
+causing a `StackOverflowError`. The golden rule is:
 
 > Don't call `run` on a sub-trampoline of the trampoline you're creating!
 
 A sign that you're doing it wrong is if you call `run` inside a method that returns a `Trampoline`. This is safe if
 the trampoline you're running is unrelated (that is, not using any of the same recursive methods) to the one you're
-creating, but even in that case it is safer (with regards to maintainability) to use `map`/`flatMap`.
+creating, but even in that case it is better (with regards to maintainability) to use `map`/`flatMap`.
+
+## Performance considerations
+
+Even though the JVM's garbage collector is pretty amazing, doing things in a loop will always be measurable faster than
+using a trampoline. So, for tail calls, you should always consider rewriting the tail call part as a loop. The
+two-children branch traversal could then look like this:
+```java
+(leftChild, rightChild) -> {
+    Trampoline<B> leftAccTrampoline = Trampoline.suspend(() ->
+        trampolinedFoldLeft(leftChild, reduce, init));
+    Trampoline<B> resultAccTrampoline = leftAccTrampoline.flatMap(leftAcc -> {
+            // ...
+        });
+    return resultAccTrampoline;
+}
+```
 
 ## Why is it called &mdash;
 
@@ -229,6 +197,6 @@ Lists to a List is naturally named "flatten".
 The expected relations between `ret`, `map`, `flatten` and `flatMap` are:
 * `trampoline.map(transformValue) = trampoline.flatMap(value -> Trampoline.ret(transformValue.apply(value)))`
 * `Trampoline.flatten(trampolinedTrampoline) = trampolinedTrampoline.flatMap(trampoline -> trampoline)`
-* `trampoline.flatMap(getNextTrampoline) = Trampoline.flatten(trampoline.map(getNextTrampoline))`
+* `trampoline.flatMap(calcNextTrampoline) = Trampoline.flatten(trampoline.map(calcNextTrampoline))`
 
 The last relation should explain why `flatMap`: It is a composition of `flatten` and `map`.
