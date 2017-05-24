@@ -7,8 +7,8 @@ closely related to recursive algorithms, since deep recursion normally requires 
  
 Consider the following (binary) `Tree` type:
 ```java
-public interface Tree<A> {
-    public <B> B visit(
+public class Tree<A> {
+    public abstract <B> B visit(
             Function<A, B> onLeaf,
             Function<Tree<A>, B> onUnaryBranch,
             BiFunction<Tree<A>, Tree<A>, B> onBinaryBranch);
@@ -24,7 +24,7 @@ As it happens, this simple interface is all we need to inspect and traverse the 
 of a functional visitor pattern, but without the need for a separate `TreeVisitor` class. Instead, we must provide three
 callbacks, one for each node type.
 
-We can make a very general purpose method for recursively traversing the leaves of `Tree`:
+We can make a very general purpose method for recursively traversing the leaves of a `Tree`:
 ```java
 public class TreeOps {
     public static <A, B> B foldLeft(Tree<A> tree, BiFunction<B, A, B> reduce, B init) {
@@ -91,7 +91,7 @@ _Example 3: A stack safe recursive traversal algorithm_
 root is done at this point. There is a one-to-one correspondence between each part of `trampolinedFoldLeft` and 
 Example 2's `foldLeft`. Let's look at the available `Trampoline` methods.
 
-### `ret`
+#### `ret`
 
 Signature: `public static <A> Trampoline<A> ret(A value)`
 
@@ -100,7 +100,7 @@ value is returned.
 
 The purpose of `ret` method is to represent the bottom values of recursions.
 
-### `suspend`
+##### `suspend`
 
 Signature: `public static <A> Trampoline<A> suspend(Supplier<Trampoline<A>> thunk)`
 
@@ -110,7 +110,7 @@ A thunk is an unevaluated function that takes no parameters. When the resulting 
 The purpose of `suspend` is to avoid an immediate recursion, instead returning a trampoline that represents the
 recursion to be run later.
 
-### `map`
+###### `map`
 
 Signature: `public static <B> Trampoline<B> map(Function<A,B> transformValue)`
 
@@ -124,7 +124,7 @@ instead of `map`.
 
 Calling `map(transformValue)` is synonymous to calling `flatMap(value -> Trampoline.ret(transformValue.apply(value))`.
 
-### `flatMap`
+####### `flatMap`
 
 Signature: `public <B> Trampoline<A> flatMap(Function<A,Trampoline<B>> getNextTrampoline)`
 
@@ -134,7 +134,7 @@ Signature: `public <B> Trampoline<A> flatMap(Function<A,Trampoline<B>> getNextTr
 
 The purpose of `flatMap` is to chain two recursions where the second recursion depends on the first one.
 
-### `run`
+######## `run`
 
 Signature: `public A run()`
 
@@ -212,13 +212,20 @@ creating, but even in that case it is safer (with regards to maintainability) to
 While running a trampoline, the stack returns to the same state between each step. If you look at a stack trace while
 stepping through a trampolined calculation, you will observe this. It's like the stack pointer jumps up and down.
 
+## Why is it called "map"?
+
+"Mapping" is a mathematical term which basically means associating a value in one domain with a value in another domain.
+The `transformValue` function passed to `map` represents such a mapping.
+
 ## Why is it called "flatMap"?
 
 Imagine that there existed a function 
 `static <A> Trampoline<A> flatten(Trampoline<Trampoline<A>> trampolinedTrampoline)`. Simply by studying the signature, 
-you should be able to figure out what it does.
+you should be able to figure out what it does. Originally, the `map` and `flatten` terms were used for Lists, where
+mapping from a list element to a list would produce a List of Lists. In that context, a function that converts a List of
+Lists to a List is naturally named "flatten".
 
-Then, these would be the expected relations between `ret`, `map`, `flatten` and `flatMap`:
+The expected relations between `ret`, `map`, `flatten` and `flatMap` are:
 * `trampoline.map(transformValue) = trampoline.flatMap(value -> Trampoline.ret(transformValue.apply(value)))`
 * `Trampoline.flatten(trampolinedTrampoline) = trampolinedTrampoline.flatMap(trampoline -> trampoline)`
 * `trampoline.flatMap(getNextTrampoline) = Trampoline.flatten(trampoline.map(getNextTrampoline))`
