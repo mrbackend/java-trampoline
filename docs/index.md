@@ -1,18 +1,20 @@
-# java-trampoline &mdash; Stack safe recursion in Java
-
-## User guide
+# User guide
 
 Read this if you just want to use the API to create recursive programs that won't overflow the stack.
 
 [User guide](https://mrbackend.github.io/java-trampoline/user-guide.html)
 
-## Reference
+# How it works
 
 Read this if you want to understand the mechanics behind trampolines.
 
-[Reference](https://mrbackend.github.io/java-trampoline/reference.html)
+[How it works](https://mrbackend.github.io/java-trampoline/how-it-works.html)
 
-## Acknowledgements
+# Javadoc
 
-Thanks to Rúnar Óli Bjarnason for discussing the monadic Trampoline in 
+[Javadoc]((https://mrbackend.github.io/java-trampoline/apidocs))
+
+# Acknowledgements
+
+Thanks to Rúnar Óli Bjarnason for discovering the monadic Trampoline; see
 [Stackless Scala With Free Monads](http://blog.higher-order.com/assets/trampolines.pdf)  

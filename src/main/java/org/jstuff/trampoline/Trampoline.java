@@ -8,6 +8,7 @@ import java.util.function.Supplier;
  * A class that represents a calculation which, when run, will not overflow the stack.
  *
  * @param <A> The type of the calculated value
+ * @see <a href="https://mrbackend.github.io/java-trampoline/index.html">java-trampoline web site</a>
  */
 public abstract class Trampoline<A> {
 
@@ -51,24 +52,24 @@ public abstract class Trampoline<A> {
      */
     public final A run() {
         Trampoline<A> curr = this;
-        while (curr instanceof FlatMap) {
-            curr = ((FlatMap<?, A>) curr).resume();
+        while (curr.isSuspended()) {
+            curr = curr.resume();
         }
-        return ((Return<A>) curr).value;
+        return curr.getValue();
     }
 
     /**
      * Creates a {@code Trampoline} that will return the result of applying the passed function to the result of this
      * {@code Trampoline}.
      *
-     * @param getTransformedValue The function used to transform the result of this Trampoline
-     * @param <B>                 The transformed value's type
-     * @return A new Trampoline that represents the application of getTransformedValue to the result of this Trampoline
-     * @throws NullPointerException if getTransformedValue is null
+     * @param transformValue The function used to transform the result of this Trampoline
+     * @param <B>            The transformed value's type
+     * @return A new Trampoline that represents the application of transformValue to the result of this Trampoline
+     * @throws NullPointerException if transformValue is null
      */
-    public final <B> Trampoline<B> map(Function<A, B> getTransformedValue) {
-        Objects.requireNonNull(getTransformedValue, "getTransformedValue");
-        return flatMap(value -> ret(getTransformedValue.apply(value)));
+    public final <B> Trampoline<B> map(Function<A, B> transformValue) {
+        Objects.requireNonNull(transformValue, "transformValue");
+        return flatMap(value -> ret(transformValue.apply(value)));
     }
 
     /**
@@ -86,11 +87,25 @@ public abstract class Trampoline<A> {
         return new FlatMap<>(this, calcNextTrampoline);
     }
 
+    abstract boolean isSuspended();
+
+    /*
+     * Transforms this Trampoline to one that's one step closer to a Return(value).
+     *
+     * resume(FlatMap(Return(value), calcNextTrampoline)) ==> calcNextTrampoline.apply(value)
+     * resume(FlatMap(FlatMap(trampoline, calcNextTrampoline), parentCalcNextTrampoline)) ==>
+     *    FlatMap(trampoline, value -> FlatMap(calcNextTrampoline.apply(value), parentCalcNextTrampoline))
+     *
+     * Throws IllegalStateException if called for a Return(value)
+     */
+    abstract Trampoline<A> resume();
+
     /*
      * Apply the parent's calcNextTrampoline function to the result of this Trampoline
      */
     abstract <B> Trampoline<B> applyFlatMap(Function<A, Trampoline<B>> parentCalcNextTrampoline);
 
+    abstract A getValue();
 
     private static final class Return<A> extends Trampoline<A> {
 
@@ -101,8 +116,23 @@ public abstract class Trampoline<A> {
         }
 
         @Override
+        boolean isSuspended() {
+            return false;
+        }
+
+        @Override
+        Trampoline<A> resume() {
+            throw new IllegalStateException();
+        }
+
+        @Override
         <B> Trampoline<B> applyFlatMap(Function<A, Trampoline<B>> parentCalcNextTrampoline) {
             return parentCalcNextTrampoline.apply(value);
+        }
+
+        @Override
+        A getValue() {
+            return value;
         }
 
     }
@@ -118,20 +148,24 @@ public abstract class Trampoline<A> {
             this.calcNextTrampoline = calcNextTrampoline;
         }
 
-        /*
-         * Transforms this Trampoline to one that's one step closer to a Return(value)
-         *
-         * resume(FlatMap(Return(value), calcNextTrampoline)) ==> calcNextTrampoline.apply(value)
-         * resume(FlatMap(FlatMap(trampoline, calcNextTrampoline), parentCalcNextTrampoline)) ==>
-         *    FlatMap(trampoline, value -> FlatMap(calcNextTrampoline.apply(value), parentCalcNextTrampoline))
-         */
-        private Trampoline<B> resume() {
+        @Override
+        boolean isSuspended() {
+            return true;
+        }
+
+        @Override
+        Trampoline<B> resume() {
             return trampoline.applyFlatMap(calcNextTrampoline);
         }
 
         @Override
         <C> Trampoline<C> applyFlatMap(Function<B, Trampoline<C>> parentCalcNextTrampoline) {
             return trampoline.flatMap(value -> calcNextTrampoline.apply(value).flatMap(parentCalcNextTrampoline));
+        }
+
+        @Override
+        B getValue() {
+            throw new IllegalStateException();
         }
 
     }

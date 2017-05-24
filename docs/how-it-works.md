@@ -1,4 +1,4 @@
-# Reference
+# How it works
 
 ## Trampoline types
 
