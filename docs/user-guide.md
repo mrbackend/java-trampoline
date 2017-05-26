@@ -50,8 +50,8 @@ might think; this tree type could be very fit for algorithms that require a fast
 could become very unbalanced, leaning either to the left or the right.
 
 Now, a tail recursive algorithm can always be rewritten as a loop (see 
-[Wikiedia: Tail call](https://en.wikipedia.org/wiki/Tail_call)), but this tree traversal is not, and can't be rewritten
-to be, tail recursive. To make it stack safe, we can either rewrite the algorithm to use an explicit stack that resides
+[Wikiedia: Tail call](https://en.wikipedia.org/wiki/Tail_call)), but tree traversal is not, and can't be rewritten to
+be, tail recursive. To make it stack safe, we must either rewrite the algorithm to use an explicit stack that resides
 on the heap, or &mdash;
  
 ## Use a trampoline
@@ -99,14 +99,18 @@ Example 2's `foldLeft`. Before proceeding, have a look at the
 ```java
 leafValue -> Trampoline.ret(reduce.apply(init, leafValue))
 ```
+_Example 3a: Trampolined left fold of a leaf_
+
 This callback is used for leaves of the tree. When recursion hits the bottom, a value is returned. Since the
 `foldLeft` method returns a `Trampoline`, the value must be wrapped in a `Trampoline`.
 
 ```java
 child -> Trampoline.suspend(() -> trampolinedFoldLeft(child, reduce, init))
 ```
-This callback is used for branches with one child. If we left out the `suspend` here, `trampolinedFoldLeft`
-would have been called immediately, leaving us with the exact problem we had originally. Hence, we wrap the recursive
+_Example 3b: Trampolined left fold of an unary branch_
+
+This callback is used for unary (one-child) branches. If we left out the `suspend` here, `trampolinedFoldLeft` would
+have been called immediately, leaving us with the exact problem we tried to solve. Hence, we wrap the recursive
 call in a `suspend`, creating a trampoline that will do the recursive call later.
 
 ```java
@@ -118,11 +122,12 @@ call in a `suspend`, creating a trampoline that will do the recursive call later
     return resultAccTrampoline;
 }
 ```
-This callback is used for branches with two children. When this branch is traversed, the left child is traversed first,
-then the right child. Just as for the single-child branch, we need to `suspend` the traversal of the left child, to
-avoid the immediate recursion. In `foldLeft`, the accumulated result from traversing the left child is used in the
-traversal of the right child. Hence, the second recursion is dependent of the first one, which is exactly what `flatMap`
-is for.
+_Example 3c: Trampolined left fold of a binary branch_
+
+This callback is used for binary (two-children) branches. When this branch is traversed, the left child is traversed
+first, then the right child. Like the unary branch, we need to `suspend` the traversal of the left child, to avoid the
+immediate recursion. In `foldLeft`, the accumulated result from traversing the left child is used in the traversal of
+the right child. Hence, the second recursion is dependent of the first one, which is exactly what `flatMap` is for.
 
 The last callback could also have been written as:
 ```java
@@ -133,6 +138,8 @@ The last callback could also have been written as:
     return resultAccTrampoline;
 })
 ```
+_Example 4: Alternative suspension of the traversal of a binary branch_
+ 
 The difference is that instead of suspending the traversal of the left child, we suspend the traversal of the whole
 branch. The two are equivalent with regards to functionality and stack safety. The only observable difference is that if
 there were some time consuming computation while processing the branch node itself, the latter would create the
@@ -148,6 +155,8 @@ A developer who's unfamiliar with trampolines might try to write the two-childre
     return resultAccTrampoline;
 })
 ```
+_Example 5: Don't call `run` while creating a tramoline_
+ 
 This is not stack safe. The reason is that when `run` is called, the corresponding code for child nodes is
 "unsuspended", forcing the "unsuspension" of their child nodes and so on until the bottom of the recursion, possibly
 causing a `StackOverflowError`. The golden rule is:
@@ -160,19 +169,46 @@ creating, but even in that case it is better (with regards to maintainability) t
 
 ## Performance considerations
 
-Even though the JVM's garbage collector is pretty amazing, doing things in a loop will always be measurable faster than
-using a trampoline. So, for tail calls, you should always consider rewriting the tail call part as a loop. The
-two-children branch traversal could then look like this:
+Even though the JVM's garbage collector is pretty amazing, doing things in a loop will always be faster than using a
+trampoline. So, you should always consider rewriting the tail call part as a loop. `foldLeft` could be implemented like
+this, where we traverse the left child of binary branches in a trampoline, and the tail recursion in a loop:
 ```java
-(leftChild, rightChild) -> {
-    Trampoline<B> leftAccTrampoline = Trampoline.suspend(() ->
-        trampolinedFoldLeft(leftChild, reduce, init));
-    Trampoline<B> resultAccTrampoline = leftAccTrampoline.flatMap(leftAcc -> {
-            // ...
-        });
-    return resultAccTrampoline;
+public final class TreeOps {
+    public static <A, B> B foldLeft(Tree<A> tree, BiFunction<B, A, B> reduce, B init) {
+        return trampolinedFoldLeft(tree, reduce, init).run();
+    }
+
+    public static <A, B> Trampoline<B> trampolinedFoldLeft(Tree<A> tree, BiFunction<B, A, B> reduce, B init) {
+        Trampoline<B> accTrampoline = Trampoline.ret(init);
+        Tree<A> currTree = tree;
+        while (isBranch(currTree)) {
+            accTrampoline = trampolinedFoldLeftOfLeftChild(currTree, reduce, accTrampoline);
+            currTree = getRightmostChild(currTree);
+        }
+        Tree<A> rightmostLeaf = currTree;
+        return accTrampoline.map(acc -> reduce.apply(acc, getLeafValue(rightmostLeaf)));
+    }
+
+    private static <A, B> Trampoline<B> trampolinedFoldLeftOfLeftChild(
+            Tree<A> tree,
+            BiFunction<B, A, B> reduce,
+            Trampoline<B> initTrampoline) {
+        return tree.visit(
+                leafValue -> {
+                    throw new AssertionError();
+                },
+                child -> initTrampoline,
+                (leftChild, rightChild) -> initTrampoline.flatMap(init -> 
+                        trampolinedFoldLeft(leftChild, reduce, init)));
+    }
 }
 ```
+_Example 6: Replacing tail recursion with a loop_
+
+Note that we need to write `isBranch`, `getRightmostChild` and `getLeafValue` as well. They're left out to help us focus
+on the traversal logic. In this case, "loopifying" the tail call leads to more code and, for left-heavy and balanced
+trees, the performance gain will be quite small. The lesson must be that it is not always best to rewrite tail recursion
+as a loop. 
 
 ## Why is it called &mdash;
 
