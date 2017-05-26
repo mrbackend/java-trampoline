@@ -62,7 +62,7 @@ a type that can be run.
 
 When a trampoline is run, it resolves the calculations inside one by one in a loop. When there are no more
 unevaluated calculations left, the final calculated value is returned. This process is described in 
-[How it works](https://mrbackend.github.io/java-trampoline/how-it-works.html).
+[Anatomy of `Trampoline`](https://mrbackend.github.io/java-trampoline/anatomy-of-trampoline.html).
 
 To make `foldLeft` stack safe using a trampoline, we rewrite it like this:
 ```java

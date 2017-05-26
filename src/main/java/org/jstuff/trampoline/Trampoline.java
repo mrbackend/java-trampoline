@@ -1,6 +1,7 @@
 package org.jstuff.trampoline;
 
 import java.util.Objects;
+import java.util.Random;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
@@ -195,4 +196,10 @@ public abstract class Trampoline<A> {
 
     }
 
+    public static void main(String[] args) {
+        Random random = new Random();
+        for (int i = 0; i < 10; ++i) {
+            System.out.println(random.nextInt());
+        }
+    }
 }

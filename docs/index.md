@@ -8,11 +8,16 @@ Read this if you just want to use the API to create recursive programs that won'
 
 Read this if you want to understand the mechanics behind trampolines.
 
-[How it works](https://mrbackend.github.io/java-trampoline/how-it-works.html)
+[Anatomy of `Trampoline`](https://mrbackend.github.io/java-trampoline/anatomy-of-trampoline.html)
 
 # Javadoc
 
-[Javadoc](https://mrbackend.github.io/java-trampoline/apidocs/)
+Browse the excellent [Javadoc](https://mrbackend.github.io/java-trampoline/apidocs/)
+
+# Q & A
+
+You will find us (me, that is) in the `#java-trampoline:matrix.org` room; connect with the
+[Matrix.org](http://matrix.org/) client of your choice. 
 
 # Acknowledgements
 

@@ -13,14 +13,14 @@ public final class TrampolineTest {
     @Test
     public void testRet() {
         // Given
-        int value = -1265660452;
+        int x = -1265660452;
 
         // When
-        Trampoline<Integer> actual = Trampoline.ret(value);
+        Trampoline<Integer> actual = Trampoline.ret(x);
 
         // Then
         int actualResult = actual.run();
-        assertEquals(value, actualResult);
+        assertEquals(x, actualResult);
     }
 
     @Test
@@ -34,14 +34,14 @@ public final class TrampolineTest {
     @Test
     public void testSuspend() {
         // Given
-        int value = 812476349;
+        int x = 812476349;
 
         // When
-        Trampoline<Integer> actual = Trampoline.suspend(() -> Trampoline.ret(value));
+        Trampoline<Integer> actual = Trampoline.suspend(() -> Trampoline.ret(x));
 
         // Then
         int actualResult = actual.run();
-        assertEquals(value, actualResult);
+        assertEquals(x, actualResult);
     }
 
     @Test
@@ -76,36 +76,6 @@ public final class TrampolineTest {
         // Given
         Trampoline<Integer> instance = Trampoline.ret(-2027639537);
         Function<Integer, Integer> f = x -> x - 1716704574;
-
-        // When
-        Trampoline<Integer> actual = instance.map(f);
-
-        // Then
-        int actualResult = actual.run();
-        int expectedResult = f.apply(instance.run());
-        assertEquals(expectedResult, actualResult);
-    }
-
-    @Test
-    public void testMapOnSuspend() {
-        // Given
-        Trampoline<Integer> instance = Trampoline.suspend(() -> Trampoline.ret(-1292849567));
-        Function<Integer, Integer> f = x -> x - 34896427;
-
-        // When
-        Trampoline<Integer> actual = instance.map(f);
-
-        // Then
-        int actualResult = actual.run();
-        int expectedResult = f.apply(instance.run());
-        assertEquals(expectedResult, actualResult);
-    }
-
-    @Test
-    public void testMapOnMapped() {
-        // Given
-        Trampoline<Integer> instance = Trampoline.ret(1775006026).map(x -> x + 1611991788);
-        Function<Integer, Integer> f = x -> x - 1591063217;
 
         // When
         Trampoline<Integer> actual = instance.map(f);
@@ -172,36 +142,6 @@ public final class TrampolineTest {
     }
 
     @Test
-    public void testFlatMapFromRetToSuspend() {
-        // Given
-        Trampoline<Integer> instance = Trampoline.ret(-1788738074);
-        Function<Integer, Trampoline<Integer>> f = x -> Trampoline.suspend(() -> Trampoline.ret(x - 1610923702));
-
-        // When
-        Trampoline<Integer> actual = instance.flatMap(f);
-
-        // Then
-        int actualResult = actual.run();
-        int expectedResult = f.apply(instance.run()).run();
-        assertEquals(expectedResult, actualResult);
-    }
-
-    @Test
-    public void testFlatMapFromRetToMapped() {
-        // Given
-        Trampoline<Integer> instance = Trampoline.ret(498225094);
-        Function<Integer, Trampoline<Integer>> f = x -> Trampoline.ret(1958893485).map(y -> (x + y) - 765599703);
-
-        // When
-        Trampoline<Integer> actual = instance.flatMap(f);
-
-        // Then
-        int actualResult = actual.run();
-        int expectedResult = f.apply(instance.run()).run();
-        assertEquals(expectedResult, actualResult);
-    }
-
-    @Test
     public void testFlatMapFromRetToFlatMapped() {
         // Given
         Trampoline<Integer> instance = Trampoline.ret(-1701222901);
@@ -218,162 +158,10 @@ public final class TrampolineTest {
     }
 
     @Test
-    public void testFlatMapFromSuspendToRet() {
-        // Given
-        Trampoline<Integer> instance = Trampoline.suspend(() -> Trampoline.ret(850505357));
-        Function<Integer, Trampoline<Integer>> f = x -> Trampoline.ret(x - 742609518);
-
-        // When
-        Trampoline<Integer> actual = instance.flatMap(f);
-
-        // Then
-        int actualResult = actual.run();
-        int expectedResult = f.apply(instance.run()).run();
-        assertEquals(expectedResult, actualResult);
-    }
-
-    @Test
-    public void testFlatMapFromSuspendToSuspend() {
-        // Given
-        Trampoline<Integer> instance = Trampoline.suspend(() -> Trampoline.ret(-120053608));
-        Function<Integer, Trampoline<Integer>> f = x -> Trampoline.suspend(() -> Trampoline.ret(x + 912930563));
-
-        // When
-        Trampoline<Integer> actual = instance.flatMap(f);
-
-        // Then
-        int actualResult = actual.run();
-        int expectedResult = f.apply(instance.run()).run();
-        assertEquals(expectedResult, actualResult);
-    }
-
-    @Test
-    public void testFlatMapFromSuspendToMapped() {
-        // Given
-        Trampoline<Integer> instance = Trampoline.suspend(() -> Trampoline.ret(119636552));
-        Function<Integer, Trampoline<Integer>> f = x -> Trampoline.ret(-2111365093).map(y -> x + y + 1499652798);
-
-        // When
-        Trampoline<Integer> actual = instance.flatMap(f);
-
-        // Then
-        int actualResult = actual.run();
-        int expectedResult = f.apply(instance.run()).run();
-        assertEquals(expectedResult, actualResult);
-    }
-
-    @Test
-    public void testFlatMapFromSuspendToFlatMapped() {
-        // Given
-        Trampoline<Integer> instance = Trampoline.suspend(() -> Trampoline.ret(-1104440380));
-        Function<Integer, Trampoline<Integer>> f =
-                x -> Trampoline.ret(843528009).flatMap(y -> Trampoline.ret(x + y + 1659767107));
-
-        // When
-        Trampoline<Integer> actual = instance.flatMap(f);
-
-        // Then
-        int actualResult = actual.run();
-        int expectedResult = f.apply(instance.run()).run();
-        assertEquals(expectedResult, actualResult);
-    }
-
-    @Test
-    public void testFlatMapFromMappedToRet() {
-        // Given
-        Trampoline<Integer> instance = Trampoline.ret(1721165158).map(x -> x - 420424603);
-        Function<Integer, Trampoline<Integer>> f = x -> Trampoline.ret(x - 322094596);
-
-        // When
-        Trampoline<Integer> actual = instance.flatMap(f);
-
-        // Then
-        int actualResult = actual.run();
-        int expectedResult = f.apply(instance.run()).run();
-        assertEquals(expectedResult, actualResult);
-    }
-
-    @Test
-    public void testFlatMapFromMappedToSuspend() {
-        // Given
-        Trampoline<Integer> instance = Trampoline.ret(23031202).map(x -> x - 1021714441);
-        Function<Integer, Trampoline<Integer>> f = x -> Trampoline.suspend(() -> Trampoline.ret(x + 300155659));
-
-        // When
-        Trampoline<Integer> actual = instance.flatMap(f);
-
-        // Then
-        int actualResult = actual.run();
-        int expectedResult = f.apply(instance.run()).run();
-        assertEquals(expectedResult, actualResult);
-    }
-
-    @Test
-    public void testFlatMapFromMappedToMapped() {
-        // Given
-        Trampoline<Integer> instance = Trampoline.ret(1300273615).map(x -> x - 480010421);
-        Function<Integer, Trampoline<Integer>> f = x -> Trampoline.ret(528706493).map(y -> (x + y) - 1761999522);
-
-        // When
-        Trampoline<Integer> actual = instance.flatMap(f);
-
-        // Then
-        int actualResult = actual.run();
-        int expectedResult = f.apply(instance.run()).run();
-        assertEquals(expectedResult, actualResult);
-    }
-
-    @Test
-    public void testFlatMapFromMappedToFlatMapped() {
-        // Given
-        Trampoline<Integer> instance = Trampoline.ret(-1317792119).map(x -> x - 1736441694);
-        Function<Integer, Trampoline<Integer>> f =
-                x -> Trampoline.ret(1120352122).flatMap(y -> Trampoline.ret(x + y + 2122991623));
-
-        // When
-        Trampoline<Integer> actual = instance.flatMap(f);
-
-        // Then
-        int actualResult = actual.run();
-        int expectedResult = f.apply(instance.run()).run();
-        assertEquals(expectedResult, actualResult);
-    }
-
-    @Test
     public void testFlatMapFromFlatMappedToRet() {
         // Given
         Trampoline<Integer> instance = Trampoline.ret(-1870413411).flatMap(x -> Trampoline.ret(x - 1338307766));
         Function<Integer, Trampoline<Integer>> f = x -> Trampoline.ret(x - 1400084479);
-
-        // When
-        Trampoline<Integer> actual = instance.flatMap(f);
-
-        // Then
-        int actualResult = actual.run();
-        int expectedResult = f.apply(instance.run()).run();
-        assertEquals(expectedResult, actualResult);
-    }
-
-    @Test
-    public void testFlatMapFromFlatMappedToSuspend() {
-        // Given
-        Trampoline<Integer> instance = Trampoline.ret(1945294623).flatMap(x -> Trampoline.ret(x + 498465731));
-        Function<Integer, Trampoline<Integer>> f = x -> Trampoline.suspend(() -> Trampoline.ret(x - 1055223754));
-
-        // When
-        Trampoline<Integer> actual = instance.flatMap(f);
-
-        // Then
-        int actualResult = actual.run();
-        int expectedResult = f.apply(instance.run()).run();
-        assertEquals(expectedResult, actualResult);
-    }
-
-    @Test
-    public void testFlatMapFromFlatMappedToMapped() {
-        // Given
-        Trampoline<Integer> instance = Trampoline.ret(1904152875).flatMap(x -> Trampoline.ret(x + 1105176313));
-        Function<Integer, Trampoline<Integer>> f = x -> Trampoline.ret(1469949990).map(y -> (x + y) - 587649679);
 
         // When
         Trampoline<Integer> actual = instance.flatMap(f);
@@ -428,6 +216,126 @@ public final class TrampolineTest {
         return (depth == 0) ?
                 Trampoline.ret(x - 391018460) :
                 Trampoline.ret(1480669361).flatMap(y -> rightHeavy((x + y) - 1332171485, depth - 1));
+    }
+
+    /*
+     * The following tests test identities that should hold for all monads (types with flatMap)
+     */
+
+    /*
+     * The left identity monad law says that ret(x).flatMap(f) = f(x)
+     */
+    @Test
+    public void testLeftIdentityMonadLaw() {
+        // Given
+        int x = -444582204;
+        Function<Integer, Trampoline<Integer>> calcNextTrampoline = y -> Trampoline.ret(y - 136899410);
+
+        // When
+        int actual = Trampoline.ret(x).flatMap(calcNextTrampoline).run();
+
+        // Then
+        int expected = calcNextTrampoline.apply(x).run();
+        assertEquals(expected, actual);
+    }
+
+    /*
+     * The right identity monad law says that t.flatMap(x -> ret(x)) = t
+     */
+    @Test
+    public void testRightIdentityMonadLaw() {
+        // Given
+        Trampoline<Integer> trampoline = Trampoline.ret(61690741);
+
+        // When
+        int actual = trampoline.flatMap(x -> Trampoline.ret(x)).run();
+
+        // Then
+        int expected = trampoline.run();
+        assertEquals(expected, actual);
+    }
+
+    /*
+     * We use a rock-paper-scissors algebra to test that flatMap is associative even for non-associative algebras.
+     *
+     * RPS_BEST_OF[RPS_BEST_OF[0][1]][2] = RPS_BEST_OF[1][2] = 2
+     * RPS_BEST_OF[0][RPS_BEST_OF[1][2]] = RPS_BEST_OF[0][2] = 0
+     */
+    private static final int[][] RPS_BEST_OF = {
+            {0, 1, 0},
+            {1, 1, 2},
+            {0, 2, 2}};
+
+    /*
+     * The associativity monad law says that t.flatMap(f).flatMap(g) = t.flatMap(x -> f(x).flatMap(g))
+     */
+    @Test
+    public void testAssociativityMonadLaw() {
+        // Given
+        Trampoline<Integer> trampoline = Trampoline.ret(0);
+        Function<Integer, Trampoline<Integer>> calcNextTrampoline1 = x -> Trampoline.ret(RPS_BEST_OF[x][1]);
+        Function<Integer, Trampoline<Integer>> calcNextTrampoline2 = x -> Trampoline.ret(RPS_BEST_OF[x][2]);
+
+        // When
+        int actual = trampoline.flatMap(calcNextTrampoline1).flatMap(calcNextTrampoline2).run();
+
+        // Then
+        int expected = trampoline.flatMap(x -> calcNextTrampoline1.apply(x).flatMap(calcNextTrampoline2)).run();
+        assertEquals(expected, actual);
+    }
+
+    /*
+     * Test t.map(f) = t.flatMap(x -> ret(f(x)))
+     */
+    @Test
+    public void testMapToFlatMapRetIdentity() {
+        // Given
+        Trampoline<Integer> trampoline = Trampoline.ret(2123764208);
+        Function<Integer, Integer> transformValue = x -> x + 1015637170;
+
+        // When
+        int actual = trampoline.map(transformValue).run();
+
+        // Then
+        int expected = trampoline.flatMap(x -> Trampoline.ret(transformValue.apply(x))).run();
+        assertEquals(expected, actual);
+    }
+
+    /*
+     * Test flatten(t) == t.flatMap(identity())
+     */
+    @Test
+    public void testFlattenToFlatMapIdentityIdentity() {
+        // Given
+        Trampoline<Trampoline<Integer>> trampolinedTrampoline = Trampoline.ret(Trampoline.ret(232486295));
+
+        // When
+        int actual = flatten(trampolinedTrampoline).run();
+
+        // Then
+        int expected = trampolinedTrampoline.flatMap(trampoline -> trampoline).run();
+        assertEquals(expected, actual);
+    }
+
+    /*
+     * Test t.flatMap(f) = flatten(t.map(f))
+     */
+    @Test
+    public void testFlatMapToFlattenMapIdentity() {
+        // Given
+        Trampoline<Integer> trampoline = Trampoline.ret(1411084928);
+        Function<Integer, Trampoline<Integer>> calcNextTrampoline = x -> Trampoline.ret(x + 1625544605);
+
+        // When
+        int actual = trampoline.flatMap(calcNextTrampoline).run();
+
+        // Then
+        int expected = flatten(trampoline.map(calcNextTrampoline)).run();
+        assertEquals(expected, actual);
+    }
+
+    private static <A> Trampoline<A> flatten(Trampoline<Trampoline<A>> trampolinedTrampoline) {
+        return Trampoline.suspend(() -> trampolinedTrampoline.run());
     }
 
     private static <A> void expectException(
