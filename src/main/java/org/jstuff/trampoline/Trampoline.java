@@ -1,7 +1,6 @@
 package org.jstuff.trampoline;
 
 import java.util.Objects;
-import java.util.Random;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
@@ -88,7 +87,7 @@ public abstract class Trampoline<A> {
      * @return A new Trampoline that represents the application of transformValue to the result of this Trampoline
      * @throws NullPointerException if transformValue is null
      */
-    public final <B> Trampoline<B> map(Function<A, B> transformValue) {
+    public final <B> Trampoline<B> map(Function<? super A, B> transformValue) {
         Objects.requireNonNull(transformValue, "transformValue");
         return flatMap(value -> ret(transformValue.apply(value)));
     }
@@ -108,7 +107,7 @@ public abstract class Trampoline<A> {
      * @return A new Trampoline that represents the sequence of this Trampoline followed by the next Trampoline
      * @throws NullPointerException if calcNextTrampoline is null
      */
-    public final <B> Trampoline<B> flatMap(Function<A, Trampoline<B>> calcNextTrampoline) {
+    public final <B> Trampoline<B> flatMap(Function<? super A, Trampoline<B>> calcNextTrampoline) {
         Objects.requireNonNull(calcNextTrampoline, "calcNextTrampoline");
         return new FlatMap<>(this, calcNextTrampoline);
     }
@@ -129,7 +128,7 @@ public abstract class Trampoline<A> {
     /*
      * Apply the parent's calcNextTrampoline function to the result of this Trampoline
      */
-    abstract <B> Trampoline<B> applyFlatMap(Function<A, Trampoline<B>> parentCalcNextTrampoline);
+    abstract <B> Trampoline<B> applyFlatMap(Function<? super A, Trampoline<B>> parentCalcNextTrampoline);
 
     abstract A getValue();
 
@@ -152,7 +151,7 @@ public abstract class Trampoline<A> {
         }
 
         @Override
-        <B> Trampoline<B> applyFlatMap(Function<A, Trampoline<B>> parentCalcNextTrampoline) {
+        <B> Trampoline<B> applyFlatMap(Function<? super A, Trampoline<B>> parentCalcNextTrampoline) {
             return parentCalcNextTrampoline.apply(value);
         }
 
@@ -167,9 +166,9 @@ public abstract class Trampoline<A> {
     private static final class FlatMap<A, B> extends Trampoline<B> {
 
         private final Trampoline<A> trampoline;
-        private final Function<A, Trampoline<B>> calcNextTrampoline;
+        private final Function<? super A, Trampoline<B>> calcNextTrampoline;
 
-        private FlatMap(Trampoline<A> trampoline, Function<A, Trampoline<B>> calcNextTrampoline) {
+        private FlatMap(Trampoline<A> trampoline, Function<? super A, Trampoline<B>> calcNextTrampoline) {
             this.trampoline = trampoline;
             this.calcNextTrampoline = calcNextTrampoline;
         }
@@ -185,7 +184,7 @@ public abstract class Trampoline<A> {
         }
 
         @Override
-        <C> Trampoline<C> applyFlatMap(Function<B, Trampoline<C>> parentCalcNextTrampoline) {
+        <C> Trampoline<C> applyFlatMap(Function<? super B, Trampoline<C>> parentCalcNextTrampoline) {
             return trampoline.flatMap(value -> calcNextTrampoline.apply(value).flatMap(parentCalcNextTrampoline));
         }
 
@@ -196,10 +195,4 @@ public abstract class Trampoline<A> {
 
     }
 
-    public static void main(String[] args) {
-        Random random = new Random();
-        for (int i = 0; i < 10; ++i) {
-            System.out.println(random.nextInt());
-        }
-    }
 }
