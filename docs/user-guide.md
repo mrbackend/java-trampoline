@@ -46,8 +46,8 @@ The accumulator is initialized with the value of `init`. Please spend a little m
 before proceeding.
 
 This algorithm won't work if the depth of the tree is in the order of thousands. That case is not as contrived as you
-might think; this tree type could be very fit for algorithms that require a fast append operation, in which case it
-could become very unbalanced, leaning either to the left or the right.
+might think; this tree type could be very fit for algorithms that need a type that offers a fast append operation, in
+which case such trees could become very unbalanced, leaning either to the left or the right.
 
 Now, a tail recursive algorithm can always be rewritten as a loop (see 
 [Wikiedia: Tail call](https://en.wikipedia.org/wiki/Tail_call)), but tree traversal is not, and can't be rewritten to
@@ -60,7 +60,7 @@ A trampoline is a data structure that represents either an unevaluated calculati
 can be viewed as a value that will be resolved later. Instead of running methods/functions immediately, we put them into
 a type that can be run.
 
-When a trampoline is run, it resolves the calculations inside one by one inside a loop. When there are no more
+When a trampoline is run, it resolves the calculations inside one by one in a loop. When there are no more
 unevaluated calculations left, the final calculated value is returned. This process is described in 
 [How it works](https://mrbackend.github.io/java-trampoline/how-it-works.html).
 
@@ -178,14 +178,17 @@ public final class TreeOps {
         return trampolinedFoldLeft(tree, reduce, init).run();
     }
 
-    public static <A, B> Trampoline<B> trampolinedFoldLeft(Tree<A> tree, BiFunction<B, A, B> reduce, B init) {
+    public static <A, B> Trampoline<B> trampolinedFoldLeft(
+            Tree<A> tree, 
+            BiFunction<B, A, B> reduce, 
+            B init) {
         Trampoline<B> accTrampoline = Trampoline.ret(init);
         Tree<A> currTree = tree;
         while (isBranch(currTree)) {
             accTrampoline = trampolinedFoldLeftOfLeftChild(currTree, reduce, accTrampoline);
             currTree = getRightmostChild(currTree);
         }
-        Tree<A> rightmostLeaf = currTree;
+        Tree<A> rightmostLeaf = currTree; 
         return accTrampoline.map(acc -> reduce.apply(acc, getLeafValue(rightmostLeaf)));
     }
 
@@ -195,7 +198,7 @@ public final class TreeOps {
             Trampoline<B> initTrampoline) {
         return tree.visit(
                 leafValue -> {
-                    throw new AssertionError();
+                    throw new AssertionError("Didn't you just test that this is a branch?");
                 },
                 child -> initTrampoline,
                 (leftChild, rightChild) -> initTrampoline.flatMap(init -> 
@@ -205,10 +208,10 @@ public final class TreeOps {
 ```
 _Example 6: Replacing tail recursion with a loop_
 
-Note that we need to write `isBranch`, `getRightmostChild` and `getLeafValue` as well. They're left out to help us focus
-on the traversal logic. In this case, "loopifying" the tail call leads to more code and, for left-heavy and balanced
-trees, the performance gain will be quite small. The lesson must be that it is not always best to rewrite tail recursion
-as a loop. 
+Note that we need to implement `isBranch`, `getRightmostChild` and `getLeafValue` as well. They're left out to help us
+focus on the traversal logic. In this case, "loopifying" the tail call leads to more code and, for left-heavy and
+balanced trees, the performance gain will be quite small. The lesson must be that it is not always best to rewrite tail
+recursion as a loop. 
 
 ## Why is it called &mdash;
 
